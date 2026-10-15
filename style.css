@@ -341,6 +341,34 @@ body.theme-halloween {
   --reader-header-bg: rgba(22, 14, 22, 0.96);
 }
 
+/* THÈME NOËL 2026 (Bleu glacé étincelant, guirlandes festives lumineuses & flocons) */
+body.theme-noel {
+  --bg: #071524;
+  --bg-subtle: rgba(12, 28, 46, 0.84);
+  --surface: rgba(14, 32, 54, 0.88);
+  --surface-hover: rgba(22, 46, 74, 0.95);
+  --surface-modal: rgba(10, 22, 38, 0.97);
+  --border: rgba(56, 189, 248, 0.32);
+  --border-strong: rgba(125, 211, 252, 0.7);
+  --text: #f0f9ff;
+  --text-muted: #bae6fd;
+  --text-faint: #7dd3fc;
+  --accent: #38bdf8;
+  --accent-contrast: #031320;
+  --tag-bg: rgba(56, 189, 248, 0.16);
+  --tag-text: #7dd3fc;
+  --badge-bg: rgba(56, 189, 248, 0.22);
+  --badge-text: #38bdf8;
+  --shadow-sm: 0 4px 14px rgba(56, 189, 248, 0.14);
+  --shadow-md: 0 10px 32px rgba(3, 14, 26, 0.85);
+  --shadow-lg: 0 20px 50px rgba(56, 189, 248, 0.22);
+  --dock-bg: rgba(10, 24, 40, 0.92);
+  --dock-border: rgba(56, 189, 248, 0.42);
+  --dock-shadow: 0 10px 35px rgba(56, 189, 248, 0.25);
+  --dock-text: #38bdf8;
+  --reader-header-bg: rgba(8, 20, 34, 0.96);
+}
+
 /* =========================================================
    FONDS D'ÉCRAN FIXES ET OVERLAYS DES THÈMES
    ========================================================= */
@@ -382,6 +410,9 @@ body.theme-halloween {
 .theme-bg-layer.bg-backroom {
   background-image: url('backroom.jpg');
 }
+.theme-bg-layer.bg-noel {
+  background-image: url('noel.jpg');
+}
 
 body.theme-galaxy .bg-galaxy,
 body.theme-galaxy .galaxy-background { opacity: 1; }
@@ -391,6 +422,7 @@ body.theme-forest .bg-forest { opacity: 1; }
 body.theme-parchemin .bg-parchemin { opacity: 1; }
 body.theme-matrix .bg-matrix { opacity: 1; }
 body.theme-backroom .bg-backroom { opacity: 1; }
+body.theme-noel .bg-noel { opacity: 1; }
 
 .theme-bg-overlay,
 .galaxy-overlay {
@@ -445,6 +477,11 @@ body.theme-halloween .theme-bg-overlay {
   background: radial-gradient(circle at 50% 25%, rgba(48, 18, 40, 0.6) 0%, rgba(13, 8, 18, 0.94) 100%);
 }
 
+body.theme-noel .theme-bg-overlay {
+  opacity: 1;
+  background: radial-gradient(circle at 50% 25%, rgba(14, 42, 70, 0.45) 0%, rgba(6, 16, 28, 0.88) 100%);
+}
+
 /* =========================================================
    CANVAS DES SPECTRES HALLOWEEN 2026
    (Passent devant l'écran, diaphanes et sans capturer les clics)
@@ -462,6 +499,126 @@ body.theme-halloween .theme-bg-overlay {
 
 body.theme-halloween .halloween-canvas {
   opacity: 1;
+}
+
+/* =========================================================
+   CANVAS DE CHUTE DE NEIGE NOËL 2026
+   (Flocons et boules de neige calmes, diaphanes, 0 gêne)
+   ========================================================= */
+.snow-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 80;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+body.theme-noel .snow-canvas {
+  opacity: 1;
+}
+
+/* =========================================================
+   GUIRLANDES LUMINEUSES DE NOËL 2026 AUTOUR DES CARTES
+   (Bordures festives scintillantes & ampoules lumineuses)
+   ========================================================= */
+
+body.theme-noel .writing-card,
+body.theme-noel .install-build-card,
+body.theme-noel .theme-gallery-card,
+body.theme-noel .about-card,
+body.theme-noel .comments-card,
+body.theme-noel .admin-section,
+body.theme-noel .modal-container {
+  position: relative;
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35), 0 0 25px rgba(14, 165, 233, 0.18), inset 0 0 8px rgba(56, 189, 248, 0.08);
+  animation: garlandBorderGlow 4s ease-in-out infinite alternate;
+}
+
+body.theme-noel .writing-card::after,
+body.theme-noel .install-build-card::after,
+body.theme-noel .theme-gallery-card::after,
+body.theme-noel .about-card::after,
+body.theme-noel .comments-card::after,
+body.theme-noel .modal-container::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    #ff3b30 0px, #ff3b30 6px,
+    transparent 6px, transparent 22px,
+    #ffd60a 22px, #ffd60a 28px,
+    transparent 28px, transparent 44px,
+    #30d158 44px, #30d158 50px,
+    transparent 50px, transparent 66px,
+    #38bdf8 66px, #38bdf8 72px,
+    transparent 72px, transparent 88px,
+    #bf5af2 88px, #bf5af2 94px,
+    transparent 94px, transparent 110px
+  );
+  padding: 2.5px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 7px #38bdf8);
+  animation: garlandLightsTwinkle 3s ease-in-out infinite alternate;
+  z-index: 10;
+}
+
+body.theme-noel .writing-card:hover,
+body.theme-noel .install-build-card:hover,
+body.theme-noel .theme-gallery-card:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.6), 0 0 35px rgba(255, 214, 10, 0.3), inset 0 0 12px rgba(56, 189, 248, 0.15);
+  transform: translateY(-3px);
+}
+
+body.theme-noel .writing-card:hover::after,
+body.theme-noel .install-build-card:hover::after,
+body.theme-noel .theme-gallery-card:hover::after {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px #ffffff) drop-shadow(0 0 12px #38bdf8) drop-shadow(0 0 16px #ffd60a);
+  animation-duration: 1.5s;
+}
+
+@keyframes garlandBorderGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.35), 0 0 22px rgba(56, 189, 248, 0.15), inset 0 0 8px rgba(56, 189, 248, 0.08);
+  }
+  33% {
+    box-shadow: 0 0 14px rgba(255, 59, 48, 0.35), 0 0 28px rgba(255, 214, 10, 0.2), inset 0 0 10px rgba(255, 59, 48, 0.08);
+  }
+  66% {
+    box-shadow: 0 0 14px rgba(48, 209, 88, 0.35), 0 0 28px rgba(56, 189, 248, 0.2), inset 0 0 10px rgba(48, 209, 88, 0.08);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(191, 90, 242, 0.35), 0 0 25px rgba(56, 189, 248, 0.25), inset 0 0 8px rgba(191, 90, 242, 0.08);
+  }
+}
+
+@keyframes garlandLightsTwinkle {
+  0% {
+    opacity: 0.65;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 6px #38bdf8);
+  }
+  33% {
+    opacity: 1;
+    filter: drop-shadow(0 0 5px #ffffff) drop-shadow(0 0 10px #ff3b30) drop-shadow(0 0 14px #ffd60a);
+  }
+  66% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 5px #ffffff) drop-shadow(0 0 10px #30d158) drop-shadow(0 0 14px #38bdf8);
+  }
+  100% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 12px #bf5af2) drop-shadow(0 0 16px #38bdf8);
+  }
 }
 
 /* =========================================================
@@ -717,8 +874,19 @@ body {
   box-shadow: 0 0 10px rgba(255, 117, 24, 0.65);
 }
 
+.preview-dot.dot-noel {
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #38bdf8 55%, #0369a1 100%);
+  border: 1px solid #bae6fd;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.75);
+}
+
 .theme-card-preview.preview-halloween {
   background: radial-gradient(circle at 50% 40%, rgba(255, 117, 24, 0.28) 0%, #0d0812 100%);
+}
+
+.theme-card-preview.preview-noel {
+  background-size: cover;
+  background-position: center;
 }
 
 .theme-card-info {

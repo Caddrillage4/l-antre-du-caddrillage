@@ -19,8 +19,10 @@
   <div class="theme-bg-layer bg-parchemin" id="parcheminBg" aria-hidden="true"></div>
   <div class="theme-bg-layer bg-matrix" id="matrixBg" aria-hidden="true"></div>
   <div class="theme-bg-layer bg-backroom" id="backroomBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-noel" id="noelBg" aria-hidden="true"></div>
   <div class="theme-bg-overlay" id="themeOverlay" aria-hidden="true"></div>
   <canvas id="halloweenCanvas" class="halloween-canvas" aria-hidden="true"></canvas>
+  <canvas id="snowCanvas" class="snow-canvas" aria-hidden="true"></canvas>
 
   <!-- Barre flottante latérale pour choisir le fond (Clair / Sombre / Galaxie / +) -->
   <aside class="theme-dock" id="themeDock" aria-label="Sélecteur de fond">
@@ -333,48 +335,72 @@
           </form>
         </div>
 
-        <!-- SECTION : GESTION DES ÉCRITS DÉJÀ CHARGÉS DANS LA VITRINE -->
-        <div class="admin-section">
-          <h3 class="section-heading">Écrits déjà chargés dans la vitrine</h3>
-          <p class="section-desc">Consultez, modifiez les textes (résumé, titre, tags, remplacement du PDF) ou supprimez-les de la vitrine.</p>
-
-          <!-- Barre de recherche et curseur poésie dans l'espace personnel -->
-          <div class="admin-search-bar-row">
-            <div class="admin-search-input-wrap">
-              <span class="search-input-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        <!-- SECTION : GESTION DES ÉCRITS DÉJÀ CHARGÉS DANS LA VITRINE (ACCORDÉON REPLIABLE) -->
+        <div class="admin-section admin-identity-section" id="adminWritingsSection" style="padding: 0; overflow: hidden;">
+          <details class="admin-accordion" id="adminWritingsAccordion" open>
+            <summary class="admin-accordion-summary">
+              <div class="accordion-title-group">
+                <div class="accordion-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                </div>
+                <div class="accordion-headings">
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <h3 class="section-heading accordion-heading-text">Écrits déjà chargés dans la vitrine</h3>
+                    <span class="poetry-status-badge" id="adminWritingsCountBadge" style="font-size: 0.8rem; background: rgba(56, 189, 248, 0.12); color: var(--accent); border-color: rgba(56, 189, 248, 0.3);">0 écrit</span>
+                  </div>
+                  <p class="section-desc accordion-desc-text">Consultez, modifiez vos textes ou repliez cette section pour naviguer sans faire défiler la page</p>
+                </div>
+              </div>
+              <span class="accordion-chevron" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </span>
-              <input type="text" id="adminSearchInput" class="admin-search-input" placeholder="Filtrer vos écrits par titre ou mot-clé..." autocomplete="off">
-              <button type="button" id="btnClearAdminSearch" class="btn-clear-search" aria-label="Effacer" style="display: none;">&times;</button>
+            </summary>
+
+            <div class="admin-accordion-content">
+              <!-- Barre de recherche et curseur poésie dans l'espace personnel -->
+              <div class="admin-search-bar-row">
+                <div class="admin-search-input-wrap">
+                  <span class="search-input-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
+                  <input type="text" id="adminSearchInput" class="admin-search-input" placeholder="Filtrer vos écrits par titre ou mot-clé..." autocomplete="off">
+                  <button type="button" id="btnClearAdminSearch" class="btn-clear-search" aria-label="Effacer" style="display: none;">&times;</button>
+                </div>
+
+                <!-- Curseur pour afficher ou masquer la poésie dans l'espace personnel -->
+                <label class="reading-time-toggle admin-poetry-toggle" id="adminPoetryToggleLabel" title="Afficher ou masquer les textes de poésie">
+                  <input type="checkbox" id="toggleAdminPoetry" class="reading-toggle-input" checked aria-label="Afficher les textes de poésie">
+                  <span class="reading-toggle-switch">
+                    <span class="reading-toggle-handle"></span>
+                  </span>
+                  <span class="reading-toggle-text">Afficher poésie</span>
+                </label>
+              </div>
+
+              <div class="admin-writings-list" id="adminWritingsList">
+                <!-- Liste générée en JS -->
+              </div>
+
+              <!-- Zone d'exportation de l'ensemble des écrits -->
+              <div class="admin-export-area">
+                <button type="button" class="btn-export-all" id="btnExportAllArchive" title="Télécharger tous les écrits dans une archive ZIP">
+                  <span class="export-icon">📦</span>
+                  <span id="exportAllBtnText">Exporter tous les écrits (.zip)</span>
+                </button>
+                <p class="export-hint">
+                  Télécharge une archive ZIP contenant l'ensemble de vos écrits classés par dossiers de catégories (Romans, Nouvelles, Poésies) avec leurs fichiers PDF et textes.
+                </p>
+              </div>
             </div>
-
-            <!-- Curseur pour afficher ou masquer la poésie dans l'espace personnel -->
-            <label class="reading-time-toggle admin-poetry-toggle" id="adminPoetryToggleLabel" title="Afficher ou masquer les textes de poésie">
-              <input type="checkbox" id="toggleAdminPoetry" class="reading-toggle-input" checked aria-label="Afficher les textes de poésie">
-              <span class="reading-toggle-switch">
-                <span class="reading-toggle-handle"></span>
-              </span>
-              <span class="reading-toggle-text">Afficher poésie</span>
-            </label>
-          </div>
-
-          <div class="admin-writings-list" id="adminWritingsList">
-            <!-- Liste générée en JS -->
-          </div>
-
-          <!-- Zone d'exportation de l'ensemble des écrits -->
-          <div class="admin-export-area">
-            <button type="button" class="btn-export-all" id="btnExportAllArchive" title="Télécharger tous les écrits dans une archive ZIP">
-              <span class="export-icon">📦</span>
-              <span id="exportAllBtnText">Exporter tous les écrits (.zip)</span>
-            </button>
-            <p class="export-hint">
-              Télécharge une archive ZIP contenant l'ensemble de vos écrits classés par dossiers de catégories (Romans, Nouvelles, Poésies) avec leurs fichiers PDF et textes.
-            </p>
-          </div>
+          </details>
         </div>
 
         <!-- SECTION : RETOURS & COMMENTAIRES PRIVÉS DES LECTEURS -->
@@ -440,7 +466,7 @@
                 <div class="form-group theme-admin-editor-section">
                   <label class="form-label">Personnalisation des textes & noms des thèmes</label>
                   <div class="form-hint" style="margin-bottom: 14px;">
-                    Modifiez les noms, badges et descriptions des 10 thèmes affichés dans la galerie de lecture.
+                    Modifiez les noms, badges et descriptions des thèmes et ambiances affichés dans la galerie de lecture.
                   </div>
 
                   <div class="theme-admin-editor-grid" id="themeAdminEditorGrid">
@@ -1173,6 +1199,18 @@
                 <span class="theme-card-badge">Saisonnier</span>
               </div>
               <p class="theme-card-desc">Brume nocturne et citrouille d'automne. De discrets petits spectres dérivent dans la nuit.</p>
+            </div>
+          </button>
+
+          <!-- Carte 12 : Noël 2026 -->
+          <button type="button" class="theme-gallery-card" data-theme="noel">
+            <div class="theme-card-preview preview-noel" style="background-image: url('noel.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Noël 2026</span>
+                <span class="theme-card-badge">Fêtes & Hiver</span>
+              </div>
+              <p class="theme-card-desc">Bleu glacé étincelant, guirlandes lumineuses festives autour des cartes et douce tombée de neige.</p>
             </div>
           </button>
         </div>

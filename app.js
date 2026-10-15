@@ -817,7 +817,7 @@ async function dbDeleteComment(id) {
 // (White, Dark, Galaxy, OLED, XP, Caddri, Forêt, Parchemin, Matrix, Backroom)
 // =========================================================
 
-const THEMES_LIST = ['white', 'dark', 'galaxy', 'oled', 'xp', 'caddri', 'forest', 'parchemin', 'matrix', 'backroom', 'halloween'];
+const THEMES_LIST = ['white', 'dark', 'galaxy', 'oled', 'xp', 'caddri', 'forest', 'parchemin', 'matrix', 'backroom', 'halloween', 'noel'];
 const THEMES_PRESETS = ['white', 'dark', 'galaxy'];
 
 const THEMES_NAMES = {
@@ -831,7 +831,8 @@ const THEMES_NAMES = {
   'parchemin': 'Parchemin',
   'matrix': 'Matrix',
   'backroom': 'Backroom',
-  'halloween': 'Halloween 2026'
+  'halloween': 'Halloween 2026',
+  'noel': 'Noël 2026'
 };
 
 const DEFAULT_THEMES_METADATA = {
@@ -915,6 +916,13 @@ const DEFAULT_THEMES_METADATA = {
     previewType: 'dot',
     previewDotClass: 'dot-halloween',
     previewBg: 'radial-gradient(circle at 50% 40%, rgba(255, 117, 24, 0.28) 0%, #0d0812 100%)'
+  },
+  noel: {
+    title: 'Noël 2026',
+    badge: 'Fêtes & Hiver',
+    desc: 'Bleu glacé étincelant, guirlandes lumineuses festives autour des cartes et douce tombée de neige.',
+    previewType: 'image',
+    image: 'noel.jpg'
   }
 };
 
@@ -1558,6 +1566,13 @@ function applyTheme(themeName, showToastFeedback = false) {
     stopHalloweenGhosts();
   }
 
+  // Gestion spécifique de la neige Noël 2026
+  if (themeName === 'noel') {
+    startNoelSnow();
+  } else if (prevTheme === 'noel') {
+    stopNoelSnow();
+  }
+
   if (showToastFeedback) {
     const label = THEMES_NAMES[themeName] || themeName;
     showToast(`Ambiance « ${label} » activée`, '🎨');
@@ -1857,6 +1872,188 @@ function stopHalloweenGhosts() {
   }
   if (halloweenCanvas && halloweenCtx) {
     halloweenCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  }
+}
+
+// =========================================================
+// SIMULATION DE CHUTE DE NEIGE NOËL 2026
+// (Canvas 2D natif, 0 dépendance, particules calmes et douces)
+// =========================================================
+
+let noelAnimId = null;
+let noelSnowflakes = [];
+let noelCanvas = null;
+let noelCtx = null;
+let noelResizeBound = false;
+
+function initNoelSnow() {
+  noelCanvas = document.getElementById('snowCanvas');
+  if (!noelCanvas) return;
+
+  noelCtx = noelCanvas.getContext('2d');
+  if (!noelCtx) return;
+
+  const updateSize = () => {
+    if (!noelCanvas || !noelCtx) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    noelCanvas.width = w * dpr;
+    noelCanvas.height = h * dpr;
+    noelCtx.resetTransform();
+    noelCtx.scale(dpr, dpr);
+  };
+
+  updateSize();
+
+  if (!noelResizeBound) {
+    window.addEventListener('resize', updateSize, { passive: true });
+    noelResizeBound = true;
+  }
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const FLAKE_COUNT = w < 768 ? 25 : 55;
+
+  noelSnowflakes = [];
+  for (let i = 0; i < FLAKE_COUNT; i++) {
+    noelSnowflakes.push(createSnowflake(w, h, true));
+  }
+}
+
+function createSnowflake(w, h, initialScatter = false) {
+  const isCrystal = Math.random() < 0.35;
+  const radius = isCrystal ? (3.2 + Math.random() * 3.6) : (1.5 + Math.random() * 3.2);
+
+  return {
+    x: Math.random() * w,
+    y: initialScatter ? Math.random() * h : -radius - Math.random() * 30,
+    radius: radius,
+    isCrystal: isCrystal,
+    speedY: 0.45 + Math.random() * 0.75, // Descente calme et tranquille
+    speedX: (Math.random() - 0.5) * 0.25,
+    swayAmp: 0.6 + Math.random() * 1.2,
+    swayFreq: 0.008 + Math.random() * 0.012,
+    swayPhase: Math.random() * Math.PI * 2,
+    rotation: Math.random() * Math.PI * 2,
+    rotationSpeed: (Math.random() - 0.5) * 0.02,
+    maxAlpha: 0.18 + Math.random() * 0.24 // Transparence 18% à 42% : doux et diaphane
+  };
+}
+
+function drawSnowflake(ctx, flake, alpha) {
+  ctx.save();
+  ctx.translate(flake.x, flake.y);
+
+  if (flake.isCrystal) {
+    ctx.rotate(flake.rotation);
+    const r = flake.radius;
+    ctx.strokeStyle = `rgba(240, 249, 255, ${alpha})`;
+    ctx.lineWidth = Math.max(1, r * 0.22);
+    ctx.lineCap = 'round';
+
+    // 6 branches de cristal de givre
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, r);
+      ctx.stroke();
+
+      // Ramifications sur chaque branche
+      const subY = r * 0.55;
+      const subLen = r * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(0, subY);
+      ctx.lineTo(-subLen, subY + subLen * 0.6);
+      ctx.moveTo(0, subY);
+      ctx.lineTo(subLen, subY + subLen * 0.6);
+      ctx.stroke();
+
+      ctx.rotate(Math.PI / 3);
+    }
+  } else {
+    // Boule de neige floutée avec halo dégradé
+    const r = flake.radius;
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+    grad.addColorStop(0.65, `rgba(224, 242, 254, ${alpha * 0.65})`);
+    grad.addColorStop(1, `rgba(186, 230, 253, 0)`);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function startNoelSnow() {
+  if (noelAnimId) return;
+
+  initNoelSnow();
+  if (!noelCtx || !noelCanvas) return;
+
+  let lastTime = performance.now();
+
+  function animate(now) {
+    if (currentTheme !== 'noel') {
+      stopNoelSnow();
+      return;
+    }
+
+    const dt = Math.min((now - lastTime) / 16.66, 2);
+    lastTime = now;
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    noelCtx.clearRect(0, 0, w, h);
+
+    for (let i = 0; i < noelSnowflakes.length; i++) {
+      const f = noelSnowflakes[i];
+
+      // Ondulation douce au vent
+      const sway = Math.sin(now * f.swayFreq + f.swayPhase);
+      f.x += (f.speedX + sway * f.swayAmp) * dt;
+      f.y += f.speedY * dt;
+      f.rotation += f.rotationSpeed * dt;
+
+      // Transparence progressive (fondu délicat en haut et en bas)
+      let currentAlpha = f.maxAlpha;
+      if (f.y < 80) {
+        currentAlpha = f.maxAlpha * Math.max(0, f.y / 80);
+      } else if (f.y > h - 100) {
+        currentAlpha = f.maxAlpha * Math.max(0, (h - f.y) / 100);
+      }
+
+      if (currentAlpha > 0.01) {
+        drawSnowflake(noelCtx, f, currentAlpha);
+      }
+
+      // Réinitialisation douce au sommet
+      if (f.y > h + f.radius * 2) {
+        noelSnowflakes[i] = createSnowflake(w, h, false);
+      } else if (f.x < -f.radius * 2) {
+        f.x = w + f.radius;
+      } else if (f.x > w + f.radius * 2) {
+        f.x = -f.radius;
+      }
+    }
+
+    noelAnimId = requestAnimationFrame(animate);
+  }
+
+  noelAnimId = requestAnimationFrame(animate);
+}
+
+function stopNoelSnow() {
+  if (noelAnimId) {
+    cancelAnimationFrame(noelAnimId);
+    noelAnimId = null;
+  }
+  if (noelCanvas && noelCtx) {
+    noelCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   }
 }
 
@@ -3457,6 +3654,18 @@ function initSearchAdmin() {
   const input = document.getElementById('adminSearchInput');
   const clearBtn = document.getElementById('btnClearAdminSearch');
   const poetryToggle = document.getElementById('toggleAdminPoetry');
+  const writingsAccordion = document.getElementById('adminWritingsAccordion');
+
+  // Mémorisation de l'état replié/déplié de l'accordéon des écrits
+  if (writingsAccordion) {
+    const savedState = localStorage.getItem('caddrillage_admin_writings_open');
+    if (savedState !== null) {
+      writingsAccordion.open = savedState === 'true';
+    }
+    writingsAccordion.addEventListener('toggle', () => {
+      localStorage.setItem('caddrillage_admin_writings_open', writingsAccordion.open ? 'true' : 'false');
+    });
+  }
 
   if (input) {
     input.addEventListener('input', () => {
@@ -3509,6 +3718,11 @@ async function refreshAdminWritings() {
         const matchTags = (w.tags || []).some(t => String(t).toLowerCase().includes(q));
         return matchTitle || matchSummary || matchPoetry || matchTags;
       });
+    }
+
+    const writingsCountBadge = document.getElementById('adminWritingsCountBadge');
+    if (writingsCountBadge) {
+      writingsCountBadge.textContent = `${writings.length} écrit${writings.length > 1 ? 's' : ''}`;
     }
 
     if (writings.length === 0) {
