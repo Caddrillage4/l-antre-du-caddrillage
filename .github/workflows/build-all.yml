@@ -3,8 +3,6 @@ name: Build & Release All Platforms (macOS, Windows, Linux, Android)
 on:
   push:
     branches: [ main, master ]
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -86,6 +84,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install system dependencies (libfuse2)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
       - name: Install dependencies & Build Linux AppImage
         run: |
           npm install
@@ -119,20 +122,22 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Initialize Capacitor Android project
+      - name: Setup Android SDK Environment
         run: |
-          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+
+      - name: Install dependencies and setup Capacitor
+        run: |
+          npm install
           npx cap add android
-          npx cap copy android
+          npx cap sync android
 
       - name: Build Android APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon
           cd ..
           cp android/app/build/outputs/apk/debug/app-debug.apk L-antre-du-caddrillage.apk
 
@@ -147,35 +152,21 @@ jobs:
   # =========================================================================
   publish-release:
     name: Publish GitHub Release
+    if: always()
     needs: [build-macos, build-windows, build-linux, build-android]
     runs-on: ubuntu-latest
     steps:
-      - name: Download macOS artifact
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: macos-dmg
           path: release-assets/
+        continue-on-error: true
 
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-exe
-          path: release-assets/
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-appimage
-          path: release-assets/
-
-      - name: Download Android artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: android-apk
-          path: release-assets/
-
-      - name: List downloaded release assets
-        run: ls -la release-assets/
+      - name: Flatten release assets
+        run: |
+          mkdir -p final-assets
+          find release-assets/ -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.apk" \) -exec cp {} final-assets/ \;
+          ls -la final-assets/
 
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
@@ -201,6 +192,6 @@ jobs:
             - Les 11 ambiances et thèmes complets (Halloween 2026 avec spectres, Backroom, Galaxie...).
             - Exportateur ZIP intégré.
           files: |
-            release-assets/*
+            final-assets/*
           prerelease: false
           draft: false

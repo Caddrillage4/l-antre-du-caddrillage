@@ -38,7 +38,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "favicon.png"
+      "icon": "app_icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -50,9 +50,14 @@
       "target": [
         "AppImage"
       ],
-      "icon": "favicon.png",
+      "icon": "app_icon_512.png",
       "category": "Literature"
     }
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
   },
   "devDependencies": {
     "electron": "^33.2.0",
