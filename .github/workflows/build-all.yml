@@ -136,7 +136,9 @@ jobs:
           mkdir -p www
           cp index.html style.css app.js www/
           cp -R libs www/
-          cp *.jpg *.jpeg *.png www/ 2>/dev/null || true
+          cp *.jpg *.jpeg *.png *.webp *.svg *.gif *.ico www/ 2>/dev/null || true
+          cp *.pdf www/ 2>/dev/null || true
+          cp seed_writings.json www/ 2>/dev/null || true
 
       - name: Install dependencies and setup Capacitor
         run: |

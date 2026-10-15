@@ -31,6 +31,12 @@
       "*.jpg",
       "*.jpeg",
       "*.png",
+      "*.webp",
+      "*.svg",
+      "*.gif",
+      "*.ico",
+      "*.pdf",
+      "seed_writings.json",
       "main-electron.js"
     ],
     "win": {

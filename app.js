@@ -245,6 +245,32 @@ async function dbGetAllWritings() {
     return merged.sort((a, b) => b.createdAt - a.createdAt);
   }
 
+  // Si ni le cloud ni IndexedDB n'ont d'écrits (premier lancement hors-ligne sur une nouvelle machine)
+  if ((!cloudWritings || cloudWritings.length === 0) && (!localWritings || localWritings.length === 0)) {
+    try {
+      const seedRes = await fetch('seed_writings.json');
+      if (seedRes.ok) {
+        const seedData = await seedRes.json();
+        if (Array.isArray(seedData) && seedData.length > 0) {
+          if (db && db.objectStoreNames.contains(DB_CONFIG.storeName)) {
+            try {
+              const transaction = db.transaction([DB_CONFIG.storeName], 'readwrite');
+              const store = transaction.objectStore(DB_CONFIG.storeName);
+              for (const sw of seedData) {
+                store.put(sw);
+              }
+            } catch (e) {
+              console.warn('Erreur remplissage seed IndexedDB:', e);
+            }
+          }
+          return seedData.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        }
+      }
+    } catch (e) {
+      // Pas de seed local disponible
+    }
+  }
+
   return localWritings;
 }
 

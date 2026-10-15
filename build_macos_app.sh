@@ -70,6 +70,11 @@ if [ -f "AppIcon.icns" ]; then
     cp "AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
 fi
 
+# Synchronisation optionnelle des écrits (si connecté)
+if command -v python3 &>/dev/null && [ -f "sync_seed.py" ]; then
+    python3 sync_seed.py 2>/dev/null || true
+fi
+
 # 5. Copie des ressources web & bibliothèques autonomes
 echo "5. Intégration des fichiers web et bibliothèques hors-ligne..."
 cp index.html "$APP_DIR/Contents/Resources/"
@@ -82,7 +87,14 @@ if [ -d "libs" ]; then
 fi
 
 # Copie des images (thèmes, fonds, icônes)
-cp *.jpg *.jpeg *.png "$APP_DIR/Contents/Resources/" 2>/dev/null || true
+cp *.jpg *.jpeg *.png *.webp *.svg *.gif *.ico "$APP_DIR/Contents/Resources/" 2>/dev/null || true
+
+# Copie des documents PDF locaux et de la base de données seed hors-ligne
+cp *.pdf "$APP_DIR/Contents/Resources/" 2>/dev/null || true
+if [ -f "seed_writings.json" ]; then
+    echo "  -> Intégration de la base de données seed_writings.json..."
+    cp seed_writings.json "$APP_DIR/Contents/Resources/"
+fi
 
 # 6. Compilation du wrapper natif Cocoa + WebKit (Objective-C)
 echo "6. Compilation du binaire natif macOS avec clang..."
