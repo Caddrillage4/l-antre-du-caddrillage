@@ -462,6 +462,49 @@
                   </div>
                 </div>
 
+                <!-- 5. Personnalisation de la page de téléchargement des applications (Builds) -->
+                <div class="form-group build-admin-editor-section">
+                  <label class="form-label">Personnalisation de la page de téléchargement des applications</label>
+                  <div class="form-hint" style="margin-bottom: 14px;">
+                    Modifiez le titre principal, le sous-titre, le message d'annonce ainsi que les titres, badges et descriptions des différents builds d'installation (macOS, Windows, Linux, Android).
+                  </div>
+
+                  <!-- Paramètres généraux de la modale -->
+                  <div class="build-admin-globals-card">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                      <label class="form-label" for="adminBuildModalTitleInput">Titre principal de la modale</label>
+                      <input type="text" id="adminBuildModalTitleInput" class="form-input" placeholder="L'antre du caddrillage — Application">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                      <label class="form-label" for="adminBuildModalSubtitleInput">Sous-titre / Slogan</label>
+                      <input type="text" id="adminBuildModalSubtitleInput" class="form-input" placeholder="Accédez à tous vos écrits hors-ligne avec confort maximal">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="adminBuildModalBannerInput">Message d'annonce / Note générale d'installation (facultatif)</label>
+                      <textarea id="adminBuildModalBannerInput" class="form-textarea" rows="2" placeholder="Message d'information ou mot de l'auteur affiché en haut de la page des applications..."></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Grille des plateformes (DA identique à l'éditeur des thèmes) -->
+                  <div class="build-admin-editor-grid" id="buildAdminEditorGrid">
+                    <!-- Rendu dynamiquement en JavaScript avec la même DA que les thèmes -->
+                  </div>
+
+                  <div class="build-admin-actions">
+                    <button type="button" class="btn-primary" id="btnSaveCustomBuilds">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                      </svg>
+                      Enregistrer les textes de la page d'installation
+                    </button>
+                    <button type="button" class="btn-secondary" id="btnResetCustomBuildsDefault" title="Rétablir les titres et descriptions d'origine des builds">
+                      Rétablir par défaut
+                    </button>
+                  </div>
+                </div>
+
                 <div class="admin-identity-actions">
                   <button type="submit" class="btn-primary" id="btnSaveIdentity">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -565,8 +608,14 @@
                 <!-- Action 1 : Recompiler macOS (.app / .dmg) -->
                 <div class="rebuild-action-item">
                   <div class="rebuild-action-info">
-                    <h4>Recompiler l'application macOS (.app & .dmg)</h4>
-                    <p>Recompile instantanément le binaire natif macOS Apple Silicon et génère l'image disque <code>.dmg</code> dans le dossier du projet avec tous vos derniers textes.</p>
+                    <div class="rebuild-title-row">
+                      <h4>Recompiler l'application macOS (.app & .dmg)</h4>
+                      <span class="rebuild-badge-os macos">🍎 macOS uniquement</span>
+                    </div>
+                    <p>Recompile instantanément le binaire natif macOS Apple Silicon / Intel et génère l'image disque <code>.dmg</code> prête à l'emploi avec tous vos derniers écrits.</p>
+                    <div class="rebuild-platform-notice">
+                      <strong>💻 Compatibilité :</strong> Cette recompilation s'exécute directement sur ce Mac (100% hors-ligne, ~2s). Elle ne fonctionne que sur un système macOS.
+                    </div>
                   </div>
                   <button type="button" class="btn-primary" id="btnRebuildMacApp">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -576,11 +625,56 @@
                   </button>
                 </div>
 
-                <!-- Action 2 : Télécharger le pack de sources multiplateforme -->
+                <!-- Action 2 : Recompiler Windows (.exe) -->
                 <div class="rebuild-action-item">
                   <div class="rebuild-action-info">
-                    <h4>Pack installateur multiplateforme (Windows, Linux, Mac)</h4>
-                    <p>Télécharge une archive ZIP prête à l'emploi contenant le site complet, la base de données de vos écrits injectée, et les scripts de build pour Windows (.exe), Linux (.AppImage) et Mac.</p>
+                    <div class="rebuild-title-row">
+                      <h4>Générer le compilateur Windows (.exe hors-ligne)</h4>
+                      <span class="rebuild-badge-os windows">🪟 Windows uniquement</span>
+                    </div>
+                    <p>Prépare le pack autonome contenant <code>build_windows_app.bat</code>, le lanceur hors-ligne et l'intégralité de vos textes récents dans <code>seed_writings.json</code>.</p>
+                    <div class="rebuild-platform-notice">
+                      <strong>💻 Compatibilité :</strong> La compilation d'un <code>.exe</code> natif ne fonctionne <strong>que sur un ordinateur Windows</strong> (Windows 10/11). Ce bouton télécharge le kit complet : lancez <code>build_windows_app.bat</code> sur votre PC Windows pour produire le .exe 100% hors-ligne.
+                    </div>
+                  </div>
+                  <button type="button" class="btn-primary" id="btnRebuildWinApp">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="3" y1="9" x2="21" y2="9"></line>
+                      <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    <span>Générer le compilateur Windows</span>
+                  </button>
+                </div>
+
+                <!-- Action 3 : Recompiler Linux (.AppImage) -->
+                <div class="rebuild-action-item">
+                  <div class="rebuild-action-info">
+                    <div class="rebuild-title-row">
+                      <h4>Générer le compilateur Linux (.AppImage hors-ligne)</h4>
+                      <span class="rebuild-badge-os linux">🐧 Linux uniquement</span>
+                    </div>
+                    <p>Prépare le pack autonome contenant <code>build_linux_app.sh</code>, l'exécutable autonome et l'intégralité des textes dans <code>seed_writings.json</code>.</p>
+                    <div class="rebuild-platform-notice">
+                      <strong>💻 Compatibilité :</strong> La compilation d'un <code>.AppImage</code> universel ne fonctionne <strong>que sur un ordinateur Linux</strong> (Ubuntu, Debian, Fedora, Arch). Ce bouton télécharge le kit complet : lancez <code>./build_linux_app.sh</code> sur votre PC Linux pour produire l'AppImage 100% hors-ligne.
+                    </div>
+                  </div>
+                  <button type="button" class="btn-primary" id="btnRebuildLinuxApp">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"></path>
+                    </svg>
+                    <span>Générer le compilateur Linux</span>
+                  </button>
+                </div>
+
+                <!-- Action 4 : Télécharger le pack de sources multiplateforme -->
+                <div class="rebuild-action-item">
+                  <div class="rebuild-action-info">
+                    <div class="rebuild-title-row">
+                      <h4>Pack universel toutes plateformes (.zip)</h4>
+                      <span class="rebuild-badge-os multi">📦 Universel</span>
+                    </div>
+                    <p>Télécharge une archive ZIP prête à l'emploi contenant le site complet, la base de données de vos écrits injectée, et l'ensemble des scripts de build (Mac, Windows, Linux).</p>
                   </div>
                   <button type="button" class="btn-secondary" id="btnExportMultiplatformPackage">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1105,14 +1199,17 @@
             </svg>
           </div>
           <div>
-            <h3 class="modal-title" style="margin: 0;">L'antre du caddrillage — Application</h3>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Accédez à tous vos écrits hors-ligne avec confort maximal</span>
+            <h3 class="modal-title" id="downloadModalTitle" style="margin: 0;">L'antre du caddrillage — Application</h3>
+            <span id="downloadModalSubtitle" style="font-size: 0.85rem; color: var(--text-muted);">Accédez à tous vos écrits hors-ligne avec confort maximal</span>
           </div>
         </div>
         <button type="button" class="btn-close-modal" id="btnCloseDownloadAppModal" aria-label="Fermer">&times;</button>
       </div>
 
       <div class="modal-body download-modal-body">
+
+        <!-- Bannière d'annonce / Note générale personnalisable -->
+        <div class="download-modal-banner" id="downloadModalBanner" style="display: none;"></div>
 
         <!-- Carte Recommandée selon l'OS détecté -->
         <div class="download-detected-card" id="downloadDetectedCard">
@@ -1200,7 +1297,7 @@
               <div class="platform-title-group">
                 <span class="platform-os-icon">🍎</span>
                 <div>
-                  <h5>macOS (Apple Silicon & Intel)</h5>
+                  <h5 class="platform-card-title">macOS (Apple Silicon & Intel)</h5>
                   <span class="platform-subtitle">macOS 11 Big Sur, Monterey, Ventura, Sonoma, Sequoia+</span>
                 </div>
               </div>
@@ -1222,7 +1319,7 @@
               <div class="platform-title-group">
                 <span class="platform-os-icon">🪟</span>
                 <div>
-                  <h5>Windows (10 & 11)</h5>
+                  <h5 class="platform-card-title">Windows (10 & 11)</h5>
                   <span class="platform-subtitle">Architecture x64 / x86</span>
                 </div>
               </div>
@@ -1244,7 +1341,7 @@
               <div class="platform-title-group">
                 <span class="platform-os-icon">🐧</span>
                 <div>
-                  <h5>Linux (.AppImage / WebKitGTK)</h5>
+                  <h5 class="platform-card-title">Linux (.AppImage / WebKitGTK)</h5>
                   <span class="platform-subtitle">Ubuntu, Debian, Fedora, Arch Linux...</span>
                 </div>
               </div>
@@ -1266,7 +1363,7 @@
               <div class="platform-title-group">
                 <span class="platform-os-icon">🤖</span>
                 <div>
-                  <h5>Android (.apk)</h5>
+                  <h5 class="platform-card-title">Android (.apk)</h5>
                   <span class="platform-subtitle">Smartphones & tablettes Android 8.0+</span>
                 </div>
               </div>

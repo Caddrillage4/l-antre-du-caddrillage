@@ -1118,6 +1118,270 @@ function initAdminThemesHandlers() {
   }
 }
 
+// =========================================================
+// PERSONNALISATION DES TEXTES DE LA PAGE D'INSTALLATION (BUILDS)
+// =========================================================
+
+const DEFAULT_BUILDS_METADATA = {
+  modalTitle: "L'antre du caddrillage — Application",
+  modalSubtitle: "Accédez à tous vos écrits hors-ligne avec confort maximal",
+  modalBanner: "",
+  platforms: {
+    macos: {
+      title: "macOS (Apple Silicon & Intel)",
+      subtitle: "macOS 11 Big Sur, Monterey, Ventura, Sonoma, Sequoia+",
+      desc: "Application native Cocoa / WebKit 64-bit arm64 & x86_64. Aucune dépendance externe, fluide et économe.",
+      heroTitle: "Application native pour macOS",
+      heroDesc: "Application native ultra-rapide optimisée pour Apple Silicon (M1, M2, M3, M4). Fonctionne à 100% sans connexion internet avec tous les écrits intégrés.",
+      icon: "🍎",
+      osTag: "macOS"
+    },
+    windows: {
+      title: "Windows (10 & 11)",
+      subtitle: "Architecture x64 / x86",
+      desc: "Exécutable autonome Windows avec WebView2 natif. Conserve tous vos écrits hors-ligne et se synchronise dès que le réseau est disponible.",
+      heroTitle: "Application autonome pour Windows",
+      heroDesc: "Installateur et version portable optimisés pour Windows 10 et 11. 100% autonome et hors-ligne avec liseuse intégrée.",
+      icon: "🪟",
+      osTag: "Windows"
+    },
+    linux: {
+      title: "Linux (.AppImage / WebKitGTK)",
+      subtitle: "Ubuntu, Debian, Fedora, Arch Linux...",
+      desc: "Format universel sans installation. Fonctionne sur toutes les distributions Linux récentes.",
+      heroTitle: "Application autonome pour Linux",
+      heroDesc: "Format universel .AppImage / WebKitGTK sans installation, prêt à tourner sur Ubuntu, Debian, Fedora, Arch Linux.",
+      icon: "🐧",
+      osTag: "Linux"
+    },
+    android: {
+      title: "Android (.apk)",
+      subtitle: "Smartphones & tablettes Android 8.0+",
+      desc: "Application mobile complète avec icône dédiée. Lisez tous les romans, nouvelles et poèmes hors-ligne sur votre téléphone.",
+      heroTitle: "Application mobile Android (.apk)",
+      heroDesc: "Application mobile complète pour smartphones et tablettes (Android 8.0+). 100% autonome et hors-ligne avec liseuse intégrée.",
+      icon: "🤖",
+      osTag: "Android"
+    }
+  }
+};
+
+function getCustomBuildsMetadata() {
+  let custom = null;
+  try {
+    const raw = localStorage.getItem('caddrillage_custom_builds');
+    if (raw) custom = JSON.parse(raw);
+  } catch (err) {
+    console.warn('Erreur lecture builds personnalisés:', err);
+  }
+
+  const result = {
+    modalTitle: (custom && custom.modalTitle && custom.modalTitle.trim()) ? custom.modalTitle.trim() : DEFAULT_BUILDS_METADATA.modalTitle,
+    modalSubtitle: (custom && custom.modalSubtitle && custom.modalSubtitle.trim()) ? custom.modalSubtitle.trim() : DEFAULT_BUILDS_METADATA.modalSubtitle,
+    modalBanner: (custom && typeof custom.modalBanner === 'string') ? custom.modalBanner.trim() : DEFAULT_BUILDS_METADATA.modalBanner,
+    platforms: {}
+  };
+
+  const platformsObj = (custom && custom.platforms) ? custom.platforms : {};
+  for (const [key, def] of Object.entries(DEFAULT_BUILDS_METADATA.platforms)) {
+    const override = platformsObj[key] || {};
+    result.platforms[key] = {
+      ...def,
+      title: (override.title && override.title.trim()) ? override.title.trim() : def.title,
+      subtitle: (override.subtitle && override.subtitle.trim()) ? override.subtitle.trim() : def.subtitle,
+      desc: (override.desc && override.desc.trim()) ? override.desc.trim() : def.desc,
+      heroTitle: (override.heroTitle && override.heroTitle.trim()) ? override.heroTitle.trim() : def.heroTitle,
+      heroDesc: (override.heroDesc && override.heroDesc.trim()) ? override.heroDesc.trim() : def.heroDesc
+    };
+  }
+
+  return result;
+}
+
+function applyBuildsMetadata() {
+  const meta = getCustomBuildsMetadata();
+
+  const modalTitle = document.getElementById('downloadModalTitle');
+  if (modalTitle) modalTitle.textContent = meta.modalTitle;
+
+  const modalSubtitle = document.getElementById('downloadModalSubtitle');
+  if (modalSubtitle) modalSubtitle.textContent = meta.modalSubtitle;
+
+  const banner = document.getElementById('downloadModalBanner');
+  if (banner) {
+    if (meta.modalBanner && meta.modalBanner.trim()) {
+      banner.textContent = meta.modalBanner;
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+      banner.textContent = '';
+    }
+  }
+
+  for (const [key, platMeta] of Object.entries(meta.platforms)) {
+    const card = document.querySelector(`.platform-card[data-platform="${key}"]`);
+    if (card) {
+      const titleEl = card.querySelector('.platform-card-title');
+      const subtitleEl = card.querySelector('.platform-subtitle');
+      const descEl = card.querySelector('.platform-desc');
+
+      if (titleEl) titleEl.textContent = platMeta.title;
+      if (subtitleEl) subtitleEl.textContent = platMeta.subtitle;
+      if (descEl) descEl.textContent = platMeta.desc;
+    }
+  }
+}
+
+function renderAdminBuildsEditor() {
+  const container = document.getElementById('buildAdminEditorGrid');
+  const titleInput = document.getElementById('adminBuildModalTitleInput');
+  const subtitleInput = document.getElementById('adminBuildModalSubtitleInput');
+  const bannerInput = document.getElementById('adminBuildModalBannerInput');
+
+  const meta = getCustomBuildsMetadata();
+
+  if (titleInput) titleInput.value = meta.modalTitle;
+  if (subtitleInput) subtitleInput.value = meta.modalSubtitle;
+  if (bannerInput) bannerInput.value = meta.modalBanner || '';
+
+  if (!container) return;
+
+  const platformKeys = Object.keys(DEFAULT_BUILDS_METADATA.platforms);
+  container.innerHTML = platformKeys.map(key => {
+    const pMeta = meta.platforms[key];
+    const def = DEFAULT_BUILDS_METADATA.platforms[key];
+
+    return `
+      <div class="build-admin-card" data-build-key="${escapeHtml(key)}">
+        <div class="build-admin-card-header">
+          <div class="build-admin-card-title-group">
+            <span class="build-admin-card-icon">${escapeHtml(def.icon)}</span>
+            <span class="build-admin-card-name">${escapeHtml(def.osTag)}</span>
+          </div>
+          <span class="build-admin-card-tag">${escapeHtml(key.toUpperCase())}</span>
+        </div>
+        <div class="build-admin-card-body">
+          <div class="build-admin-field">
+            <label class="build-admin-field-label">Titre de la plateforme</label>
+            <input type="text" 
+                   class="form-input build-admin-input build-admin-input-title" 
+                   value="${escapeHtml(pMeta.title)}" 
+                   placeholder="Ex: ${escapeHtml(def.title)}"
+                   data-build-key="${escapeHtml(key)}">
+          </div>
+          <div class="build-admin-field">
+            <label class="build-admin-field-label">Sous-titre / Compatibilité OS</label>
+            <input type="text" 
+                   class="form-input build-admin-input build-admin-input-subtitle" 
+                   value="${escapeHtml(pMeta.subtitle)}" 
+                   placeholder="Ex: ${escapeHtml(def.subtitle)}"
+                   data-build-key="${escapeHtml(key)}">
+          </div>
+          <div class="build-admin-field">
+            <label class="build-admin-field-label">Description générale</label>
+            <textarea class="form-textarea build-admin-input build-admin-input-desc" 
+                      rows="2" 
+                      placeholder="Description du binaire..."
+                      data-build-key="${escapeHtml(key)}">${escapeHtml(pMeta.desc)}</textarea>
+          </div>
+          <div class="build-admin-field">
+            <label class="build-admin-field-label">Titre mis en avant (Hero)</label>
+            <input type="text" 
+                   class="form-input build-admin-input build-admin-input-hero-title" 
+                   value="${escapeHtml(pMeta.heroTitle)}" 
+                   placeholder="Ex: ${escapeHtml(def.heroTitle)}"
+                   data-build-key="${escapeHtml(key)}">
+          </div>
+          <div class="build-admin-field">
+            <label class="build-admin-field-label">Message mis en avant (Hero)</label>
+            <textarea class="form-textarea build-admin-input build-admin-input-hero-desc" 
+                      rows="2" 
+                      placeholder="Description mise en avant..."
+                      data-build-key="${escapeHtml(key)}">${escapeHtml(pMeta.heroDesc)}</textarea>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function saveCustomBuildsFromAdmin(showFeedback = true) {
+  const titleInput = document.getElementById('adminBuildModalTitleInput');
+  const subtitleInput = document.getElementById('adminBuildModalSubtitleInput');
+  const bannerInput = document.getElementById('adminBuildModalBannerInput');
+
+  const cards = document.querySelectorAll('#buildAdminEditorGrid .build-admin-card');
+
+  const customObj = {
+    modalTitle: titleInput ? titleInput.value.trim() : DEFAULT_BUILDS_METADATA.modalTitle,
+    modalSubtitle: subtitleInput ? subtitleInput.value.trim() : DEFAULT_BUILDS_METADATA.modalSubtitle,
+    modalBanner: bannerInput ? bannerInput.value.trim() : '',
+    platforms: {}
+  };
+
+  cards.forEach(card => {
+    const key = card.getAttribute('data-build-key');
+    if (!key || !DEFAULT_BUILDS_METADATA.platforms[key]) return;
+
+    const titleIn = card.querySelector('.build-admin-input-title');
+    const subIn = card.querySelector('.build-admin-input-subtitle');
+    const descIn = card.querySelector('.build-admin-input-desc');
+    const heroTitleIn = card.querySelector('.build-admin-input-hero-title');
+    const heroDescIn = card.querySelector('.build-admin-input-hero-desc');
+
+    const def = DEFAULT_BUILDS_METADATA.platforms[key];
+
+    customObj.platforms[key] = {
+      title: (titleIn && titleIn.value.trim()) ? titleIn.value.trim() : def.title,
+      subtitle: (subIn && subIn.value.trim()) ? subIn.value.trim() : def.subtitle,
+      desc: (descIn && descIn.value.trim()) ? descIn.value.trim() : def.desc,
+      heroTitle: (heroTitleIn && heroTitleIn.value.trim()) ? heroTitleIn.value.trim() : def.heroTitle,
+      heroDesc: (heroDescIn && heroDescIn.value.trim()) ? heroDescIn.value.trim() : def.heroDesc
+    };
+  });
+
+  try {
+    localStorage.setItem('caddrillage_custom_builds', JSON.stringify(customObj));
+  } catch (e) {
+    console.error('Erreur sauvegarde builds personnalisés:', e);
+  }
+
+  applyBuildsMetadata();
+
+  if (showFeedback) {
+    showToast('Textes de la page d\'installation enregistrés avec succès !', 'success');
+  }
+  return true;
+}
+
+function resetCustomBuildsToDefault() {
+  if (confirm('Voulez-vous rétablir les titres, sous-titres, messages et descriptions d\'origine de la page d\'installation ?')) {
+    localStorage.removeItem('caddrillage_custom_builds');
+    applyBuildsMetadata();
+    renderAdminBuildsEditor();
+    showToast('Textes d\'origine de la page d\'installation rétablis.', 'info');
+  }
+}
+
+function initAdminBuildsHandlers() {
+  const btnSave = document.getElementById('btnSaveCustomBuilds');
+  const btnReset = document.getElementById('btnResetCustomBuildsDefault');
+
+  if (btnSave) {
+    btnSave.addEventListener('click', (e) => {
+      e.preventDefault();
+      saveCustomBuildsFromAdmin(true);
+    });
+  }
+
+  if (btnReset) {
+    btnReset.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetCustomBuildsToDefault();
+    });
+  }
+}
+
 let currentTheme = localStorage.getItem('caddrillage_theme') || 'white';
 let matrixObserver = null;
 const MATRIX_CHARS = '0123456789ABCDEFｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ#%*@&<>~';
@@ -1674,6 +1938,7 @@ function switchToPersonalSpace() {
   refreshAdminComments();
   applySiteIdentity();
   renderAdminThemesEditor();
+  renderAdminBuildsEditor();
   renderAdminDashboardStats();
   updateRebuildStatus();
 }
@@ -4220,6 +4485,10 @@ function initAboutSection() {
   initAdminThemesHandlers();
   renderAdminThemesEditor();
 
+  // Initialisation et rendu de l'éditeur des builds d'installation
+  initAdminBuildsHandlers();
+  renderAdminBuildsEditor();
+
   // Premier rendu du contenu dans la modale
   renderAboutText(getAboutText());
 }
@@ -4610,6 +4879,9 @@ function openDownloadAppModal() {
   const modal = document.getElementById('downloadAppModal');
   if (!modal) return;
 
+  applyBuildsMetadata();
+  const meta = getCustomBuildsMetadata();
+
   const currentOS = detectUserPlatform();
   const labelEl = document.getElementById('detectedOSLabel');
   const titleEl = document.getElementById('detectedHeroTitle');
@@ -4619,9 +4891,10 @@ function openDownloadAppModal() {
   const subtextEl = document.getElementById('btnMainDownloadSubtext');
 
   if (currentOS === 'macos') {
+    const pMeta = meta.platforms.macos;
     if (labelEl) labelEl.textContent = 'Plateforme détectée : macOS (Apple Silicon)';
-    if (titleEl) titleEl.textContent = 'Application native pour macOS';
-    if (descEl) descEl.textContent = 'Application native ultra-rapide optimisée pour Apple Silicon (M1, M2, M3, M4). Fonctionne à 100% sans connexion internet avec tous les écrits intégrés.';
+    if (titleEl) titleEl.textContent = pMeta.heroTitle;
+    if (descEl) descEl.textContent = pMeta.heroDesc;
     if (mainBtn) {
       mainBtn.setAttribute('href', "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.dmg");
       mainBtn.setAttribute('download', "L-antre-du-caddrillage.dmg");
@@ -4630,9 +4903,10 @@ function openDownloadAppModal() {
     if (mainBtnText) mainBtnText.textContent = 'Télécharger pour macOS (.dmg)';
     if (subtextEl) subtextEl.textContent = 'Installateur complet avec raccourci /Applications (~2.5 Mo)';
   } else if (currentOS === 'windows') {
+    const pMeta = meta.platforms.windows;
     if (labelEl) labelEl.textContent = 'Plateforme détectée : Windows (10 / 11)';
-    if (titleEl) titleEl.textContent = 'Application autonome pour Windows';
-    if (descEl) descEl.textContent = 'Exécutable autonome optimisé pour Windows avec WebView2 natif. Conserve tous vos écrits hors-ligne et se synchronise dès que le réseau est disponible.';
+    if (titleEl) titleEl.textContent = pMeta.heroTitle;
+    if (descEl) descEl.textContent = pMeta.heroDesc;
     if (mainBtn) {
       mainBtn.setAttribute('href', "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.exe");
       mainBtn.setAttribute('download', "L-antre-du-caddrillage.exe");
@@ -4641,9 +4915,10 @@ function openDownloadAppModal() {
     if (mainBtnText) mainBtnText.textContent = 'Télécharger pour Windows (.exe)';
     if (subtextEl) subtextEl.textContent = 'Exécutable autonome direct Windows 10 & 11';
   } else if (currentOS === 'linux') {
+    const pMeta = meta.platforms.linux;
     if (labelEl) labelEl.textContent = 'Plateforme détectée : Linux (.AppImage)';
-    if (titleEl) titleEl.textContent = 'Application autonome pour Linux';
-    if (descEl) descEl.textContent = 'Format universel .AppImage / WebKitGTK sans installation, prêt à tourner sur Ubuntu, Debian, Fedora, Arch Linux.';
+    if (titleEl) titleEl.textContent = pMeta.heroTitle;
+    if (descEl) descEl.textContent = pMeta.heroDesc;
     if (mainBtn) {
       mainBtn.setAttribute('href', "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.AppImage");
       mainBtn.setAttribute('download', "L-antre-du-caddrillage.AppImage");
@@ -4652,9 +4927,10 @@ function openDownloadAppModal() {
     if (mainBtnText) mainBtnText.textContent = 'Télécharger pour Linux (.AppImage)';
     if (subtextEl) subtextEl.textContent = 'Format universel Linux sans installation';
   } else if (currentOS === 'android') {
+    const pMeta = meta.platforms.android;
     if (labelEl) labelEl.textContent = 'Plateforme détectée : Android';
-    if (titleEl) titleEl.textContent = 'Application mobile Android (.apk)';
-    if (descEl) descEl.textContent = "Application mobile complète pour smartphones et tablettes (Android 8.0+). 100% autonome et hors-ligne avec liseuse intégrée.";
+    if (titleEl) titleEl.textContent = pMeta.heroTitle;
+    if (descEl) descEl.textContent = pMeta.heroDesc;
     if (mainBtn) {
       mainBtn.setAttribute('href', "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.apk");
       mainBtn.setAttribute('download', "L-antre-du-caddrillage.apk");
@@ -4677,6 +4953,8 @@ function closeDownloadAppModal() {
 }
 
 function initDownloadAppModal() {
+  applyBuildsMetadata();
+
   const btnOpen = document.getElementById('btnOpenDownloadModal');
   const btnClose = document.getElementById('btnCloseDownloadAppModal');
   const btnDismiss = document.getElementById('btnDismissDownloadAppModal');
@@ -4805,6 +5083,16 @@ function initRebuildSection() {
     });
   }
 
+  const btnRebuildWin = document.getElementById('btnRebuildWinApp');
+  if (btnRebuildWin) {
+    btnRebuildWin.addEventListener('click', () => exportWindowsRebuildPackage());
+  }
+
+  const btnRebuildLinux = document.getElementById('btnRebuildLinuxApp');
+  if (btnRebuildLinux) {
+    btnRebuildLinux.addEventListener('click', () => exportLinuxRebuildPackage());
+  }
+
   if (btnExport) {
     btnExport.addEventListener('click', () => exportMultiplatformPackage());
   }
@@ -4816,6 +5104,260 @@ function initRebuildSection() {
         updateRebuildStatus();
       }
     });
+  }
+}
+
+// Génération du compilateur Windows hors-ligne avec tous les écrits
+async function exportWindowsRebuildPackage() {
+  if (!window.JSZip) {
+    showToast("Bibliothèque ZIP non disponible.", "error");
+    return;
+  }
+  const logBox = document.getElementById('rebuildLogBox');
+  const logText = document.getElementById('rebuildLogText');
+  const spinner = document.getElementById('rebuildSpinner');
+  if (logBox) logBox.style.display = 'block';
+  if (spinner) spinner.style.display = 'inline-block';
+  if (logText) logText.textContent = "Démarrage de la préparation Windows hors-ligne...\n";
+
+  const appendLog = (msg) => {
+    if (logText) {
+      logText.textContent += msg + "\n";
+      logText.scrollTop = logText.scrollHeight;
+    }
+  };
+
+  try {
+    appendLog("[1/4] Analyse des écrits et figeage des métriques...");
+    const writings = await dbGetAllWritings();
+    appendLog(`✓ ${writings.length} écrits extraits avec poésies, résumés et métriques.`);
+
+    appendLog("[2/4] Création de la base embarquée 'seed_writings.json'...");
+    const zip = new window.JSZip();
+    zip.file("seed_writings.json", JSON.stringify(writings, null, 2));
+
+    appendLog("[3/4] Intégration du script 'build_windows_app.bat' et de la documentation...");
+    const winBat = `@echo off
+setlocal EnableDelayedExpansion
+title L'antre du caddrillage - Lanceur & Compilateur Windows
+
+echo ========================================================
+echo   L'antre du caddrillage - Compilateur & Lanceur Windows
+echo ========================================================
+echo.
+echo Ce script fonctionne a 100%% hors-ligne sur votre PC Windows.
+echo Vos ${writings.length} textes recents sont directement charges depuis seed_writings.json.
+echo.
+
+set PORT=8080
+set INDEX_URL=http://localhost:%PORT%/index.html
+
+where npx >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [Option] Node.js et npm sont detectes sur ce PC.
+    echo 1. Lancer l'application directement hors-ligne
+    echo 2. Compiler un installateur autonome .exe (via Electron)
+    set /p USER_CHOICE="Entrez votre choix (1 ou 2) [Defaut: 1] : "
+    if "!USER_CHOICE!"=="2" (
+        echo.
+        echo Construction de l'executable Windows .exe en cours...
+        call npx electron-builder --win nsis portable --publish never
+        echo.
+        echo [Succes] Fichiers .exe generes dans le dossier dist\\ :
+        dir dist\\*.exe 2>nul
+        pause
+        goto end
+    )
+)
+
+echo.
+echo Lancement du mode autonome local avec vos textes embarques...
+python --version >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Serveur local demarre sur %INDEX_URL%...
+    start "" msedge --app="%INDEX_URL%" 2>nul || start "" chrome --app="%INDEX_URL%" 2>nul || start "" "%INDEX_URL%"
+    python -m http.server %PORT%
+    goto end
+)
+
+python3 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Serveur local demarre sur %INDEX_URL%...
+    start "" msedge --app="%INDEX_URL%" 2>nul || start "" chrome --app="%INDEX_URL%" 2>nul || start "" "%INDEX_URL%"
+    python3 -m http.server %PORT%
+    goto end
+)
+
+echo [Info] Ouverture directe dans le navigateur par defaut...
+start "" "%~dp0index.html"
+
+:end
+pause
+`;
+    zip.file("build_windows_app.bat", winBat);
+
+    const winReadme = `==================================================================
+  L'ANTRE DU CADDRIMAGE — PACK COMPILATEUR WINDOWS (.EXE)
+==================================================================
+
+Ce pack autonome contient 100% de vos ${writings.length} textes pré-embarqués dans "seed_writings.json".
+
+⚠️ IMPORTANT - COMPATIBILITÉ SYSTÈME :
+La compilation d'un exécutable Windows (.exe) ne peut s'effectuer QUE
+sur un ordinateur fonctionnant sous Windows (Windows 10 ou 11).
+
+COMMENT L'UTILISER SUR VOTRE PC WINDOWS :
+1. Décompressez cette archive ZIP sur votre PC Windows.
+2. Double-cliquez sur "build_windows_app.bat" :
+   - Si Node.js est installé sur votre PC, le script vous proposera
+     de compiler l'installateur officiel .exe en 1 clic.
+   - Sinon, l'application se lance instantanément dans Edge/Chrome
+     en mode application hors-ligne avec tous vos textes !
+`;
+    zip.file("README_WINDOWS.txt", winReadme);
+
+    appendLog("[4/4] ⚠️ NOTE IMPORTANTE : Ce script doit être exécuté sur un PC sous Windows pour finaliser le .exe.");
+    appendLog("✓ Archive Windows autonome générée avec succès !");
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lantre_du_caddrillage_windows_rebuild_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    if (spinner) spinner.style.display = 'none';
+    showToast("Pack compilateur Windows téléchargé avec succès !", "success");
+  } catch (err) {
+    appendLog("Erreur génération kit Windows : " + err.message);
+    if (spinner) spinner.style.display = 'none';
+    showToast("Erreur lors de la génération Windows.", "error");
+  }
+}
+
+// Génération du compilateur Linux hors-ligne avec tous les écrits
+async function exportLinuxRebuildPackage() {
+  if (!window.JSZip) {
+    showToast("Bibliothèque ZIP non disponible.", "error");
+    return;
+  }
+  const logBox = document.getElementById('rebuildLogBox');
+  const logText = document.getElementById('rebuildLogText');
+  const spinner = document.getElementById('rebuildSpinner');
+  if (logBox) logBox.style.display = 'block';
+  if (spinner) spinner.style.display = 'inline-block';
+  if (logText) logText.textContent = "Démarrage de la préparation Linux hors-ligne...\n";
+
+  const appendLog = (msg) => {
+    if (logText) {
+      logText.textContent += msg + "\n";
+      logText.scrollTop = logText.scrollHeight;
+    }
+  };
+
+  try {
+    appendLog("[1/4] Analyse des écrits et figeage des métriques...");
+    const writings = await dbGetAllWritings();
+    appendLog(`✓ ${writings.length} écrits extraits avec poésies, résumés et métriques.`);
+
+    appendLog("[2/4] Création de la base embarquée 'seed_writings.json'...");
+    const zip = new window.JSZip();
+    zip.file("seed_writings.json", JSON.stringify(writings, null, 2));
+
+    appendLog("[3/4] Intégration du script 'build_linux_app.sh' et de la documentation...");
+    const linuxSh = `#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "========================================================"
+echo "  L'antre du caddrillage - Compilateur & Lanceur Linux"
+echo "========================================================"
+echo "Ce script s'exécute sur un environnement Linux (Ubuntu, Debian, Fedora, Arch)."
+echo "Vos ${writings.length} textes récents sont directement chargés depuis seed_writings.json."
+echo ""
+
+if command -v npx &>/dev/null; then
+    echo "[Option] Node.js & npm sont installés sur cette machine Linux."
+    read -p "Voulez-vous compiler le paquet universel .AppImage ? (o/N) : " BUILD_CHOICE
+    if [[ "$BUILD_CHOICE" =~ ^[oOyY]$ ]]; then
+        echo "Compilation de l'AppImage en cours..."
+        npx electron-builder --linux AppImage --publish never
+        echo "✓ AppImage généré dans dist/ :"
+        ls -lh dist/*.AppImage 2>/dev/null || true
+        exit 0
+    fi
+fi
+
+echo "Démarrage du mode autonome local avec tous vos écrits..."
+if command -v python3 &>/dev/null; then
+    PORT=8080
+    URL="http://localhost:$PORT/index.html"
+    echo "Démarrage du serveur local sur le port $PORT..."
+    python3 -m http.server $PORT &
+    SERVER_PID=$!
+    sleep 1
+
+    if command -v xdg-open &>/dev/null; then
+        xdg-open "$URL"
+    elif command -v google-chrome &>/dev/null; then
+        google-chrome --app="$URL"
+    elif command -v firefox &>/dev/null; then
+        firefox "$URL"
+    fi
+
+    echo "Application active. Appuyez sur Ctrl+C pour arrêter."
+    wait $SERVER_PID
+else
+    xdg-open "$SCRIPT_DIR/index.html" 2>/dev/null || sensible-browser "$SCRIPT_DIR/index.html" 2>/dev/null || true
+fi
+`;
+    zip.file("build_linux_app.sh", linuxSh);
+
+    const linuxReadme = `==================================================================
+  L'ANTRE DU CADDRIMAGE — PACK COMPILATEUR LINUX (.APPIMAGE)
+==================================================================
+
+Ce pack autonome contient 100% de vos ${writings.length} textes pré-embarqués dans "seed_writings.json".
+
+⚠️ IMPORTANT - COMPATIBILITÉ SYSTÈME :
+La compilation d'un paquet Linux (.AppImage) ne peut s'effectuer QUE
+sur un ordinateur fonctionnant sous Linux (Ubuntu, Debian, Fedora, Arch).
+
+COMMENT L'UTILISER SUR VOTRE MACHINE LINUX :
+1. Décompressez cette archive ZIP sur votre PC Linux.
+2. Rendez le script exécutable et lancez-le :
+     chmod +x build_linux_app.sh
+     ./build_linux_app.sh
+   - Si Node.js est installé sur votre Linux, le script vous proposera
+     de compiler l'AppImage universel en 1 clic.
+   - Sinon, l'application se lance instantanément dans votre navigateur
+     en mode application autonome hors-ligne avec tous vos textes !
+`;
+    zip.file("README_LINUX.txt", linuxReadme);
+
+    appendLog("[4/4] ⚠️ NOTE IMPORTANTE : Ce script doit être exécuté sur un PC sous Linux pour finaliser l'AppImage.");
+    appendLog("✓ Archive Linux autonome générée avec succès !");
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lantre_du_caddrillage_linux_rebuild_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    if (spinner) spinner.style.display = 'none';
+    showToast("Pack compilateur Linux téléchargé avec succès !", "success");
+  } catch (err) {
+    appendLog("Erreur génération kit Linux : " + err.message);
+    if (spinner) spinner.style.display = 'none';
+    showToast("Erreur lors de la génération Linux.", "error");
   }
 }
 
@@ -4834,6 +5376,7 @@ async function exportMultiplatformPackage() {
 
     const writingsJson = JSON.stringify(writings, null, 2);
     zip.file("writings_database.json", writingsJson);
+    zip.file("seed_writings.json", writingsJson);
 
     const macScript = `#!/bin/bash
 set -e
@@ -4869,11 +5412,11 @@ fi
     const readme = `# L'antre du caddrillage — Pack Multiplateforme
 
 Ce dossier contient l'ensemble des sources, bibliothèques et données de l'application autonome pour :
-- **macOS** (Apple Silicon M1/M2/M3/M4 & Intel) : Exécuter \`./build_macos_app.sh\` pour générer le .dmg et le .app.
-- **Windows** (10 & 11) : Exécuter \`build_windows.bat\`.
-- **Linux** (.AppImage / WebKitGTK) : Exécuter \`build_linux.sh\`.
+- **macOS** (Apple Silicon M1/M2/M3/M4 & Intel) : Exécuter \`./build_macos_app.sh\` pour générer le .dmg et le .app (fonctionne sur macOS).
+- **Windows** (10 & 11) : Exécuter \`build_windows_app.bat\` (fonctionne sur Windows).
+- **Linux** (.AppImage / WebKitGTK) : Exécuter \`build_linux_app.sh\` (fonctionne sur Linux).
 
-Tous les ${writings.length} écrits actuels de l'auteur sont pré-embarqués dans \`writings_database.json\`.
+Tous les ${writings.length} écrits actuels de l'auteur sont pré-embarqués dans \`seed_writings.json\`.
 `;
     zip.file("README_INSTALLATION.md", readme);
 
