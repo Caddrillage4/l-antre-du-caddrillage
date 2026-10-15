@@ -1,0 +1,61 @@
+{
+  "name": "lantre-du-caddrillage",
+  "version": "1.0.0",
+  "description": "L'antre du caddrillage — Site d'écrits, fictions et pensées littéraires",
+  "main": "main-electron.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:mac": "electron-builder --mac"
+  },
+  "keywords": [
+    "caddrillage",
+    "literature",
+    "books",
+    "reading"
+  ],
+  "author": "Caddrillage",
+  "license": "MIT",
+  "build": {
+    "appId": "com.caddrillage.lantre",
+    "productName": "L'antre du caddrillage",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "style.css",
+      "app.js",
+      "libs/**/*",
+      "*.jpg",
+      "*.jpeg",
+      "*.png",
+      "main-electron.js"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "favicon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "favicon.png",
+      "category": "Literature"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

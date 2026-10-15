@@ -1,0 +1,15 @@
+.DS_Store
+.module_cache/
+build_tmp/
+build_dmg_staging/
+node_modules/
+dist/
+android/
+release-assets/
+*.log
+*.tmp
+temp_hybrid.dmg
+test.dmg
+test_sym.dmg
+*.app/
+*.dmg

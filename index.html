@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L'antre du caddrillage</title>
+  <meta name="description" content="L'antre du caddrillage — Site d'écrits et de lectures (Nouvelle, Nouvelle longue, Roman, Poésie)">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-white">
+
+  <!-- Fonds d'écran spécifiques pour les thèmes illustrés -->
+  <div class="theme-bg-layer bg-galaxy" id="galaxyBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-xp" id="xpBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-caddri" id="caddriBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-forest" id="forestBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-parchemin" id="parcheminBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-matrix" id="matrixBg" aria-hidden="true"></div>
+  <div class="theme-bg-layer bg-backroom" id="backroomBg" aria-hidden="true"></div>
+  <div class="theme-bg-overlay" id="themeOverlay" aria-hidden="true"></div>
+  <canvas id="halloweenCanvas" class="halloween-canvas" aria-hidden="true"></canvas>
+
+  <!-- Barre flottante latérale pour choisir le fond (Clair / Sombre / Galaxie / +) -->
+  <aside class="theme-dock" id="themeDock" aria-label="Sélecteur de fond">
+    <span class="theme-dock-label">Fond</span>
+    <button type="button" class="theme-btn active" data-theme="white" title="Fond Clair" aria-pressed="true">
+      <span class="theme-preview-dot dot-white"></span>
+      <span class="theme-btn-title">Clair</span>
+    </button>
+    <button type="button" class="theme-btn" data-theme="dark" title="Fond Sombre" aria-pressed="false">
+      <span class="theme-preview-dot dot-dark"></span>
+      <span class="theme-btn-title">Sombre</span>
+    </button>
+    <button type="button" class="theme-btn" data-theme="galaxy" title="Fond Galaxie" aria-pressed="false">
+      <span class="theme-preview-dot dot-galaxy"></span>
+      <span class="theme-btn-title">Galaxie</span>
+    </button>
+    <!-- Bouton + qui n'apparaît qu'au survol de la souris sur PC (et par appui long sur smartphone) -->
+    <button type="button" class="theme-btn theme-btn-more" id="btnOpenThemeGallery" title="Tous les thèmes & ambiances (+)" aria-label="Ouvrir la galerie des thèmes">
+      <span class="theme-more-icon">+</span>
+      <span class="theme-btn-title">Plus</span>
+    </button>
+  </aside>
+
+  <div class="site-wrapper">
+
+    <!-- En-tête principal -->
+    <header class="site-header">
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <button type="button" class="btn-about-link" id="btnOpenAboutModal" title="Découvrir l'auteur et la démarche de l'Antre">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>À propos</span>
+          </button>
+
+          <button type="button" class="btn-about-link btn-app-link" id="btnOpenDownloadModal" title="Installer l'application hors-ligne (macOS, Windows, Linux...)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Application</span>
+            <span class="app-btn-pill">Hors-ligne</span>
+          </button>
+        </div>
+
+        <button type="button" class="btn-personal-space" id="btnOpenPersonalSpace">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span id="personalSpaceBtnText">Espace personnel</span>
+        </button>
+      </div>
+
+      <h1 class="site-title" id="siteTitleHeading">L'antre du caddrillage</h1>
+      <p class="site-tagline" id="siteTaglinePara">Recueil d'écrits, fictions et pensées littéraires</p>
+    </header>
+
+    <!-- VUE 1 : VITRINE PUBLIQUE -->
+    <main id="showcaseView">
+      
+      <!-- Barre de navigation des 4 catégories -->
+      <nav class="categories-nav-wrapper" aria-label="Catégories d'écrits">
+        <div class="categories-nav">
+          <button type="button" class="category-tab active" data-category="all">
+            <span>Tous les écrits</span>
+            <span class="category-count" id="countAll">(0)</span>
+          </button>
+          <button type="button" class="category-tab" data-category="nouvelle">
+            <span>Nouvelle</span>
+            <span class="category-count" id="countNouvelle">(0)</span>
+          </button>
+          <button type="button" class="category-tab" data-category="nouvelle-longue">
+            <span>Nouvelle longue</span>
+            <span class="category-count" id="countNouvelleLongue">(0)</span>
+          </button>
+          <button type="button" class="category-tab" data-category="roman">
+            <span>Roman</span>
+            <span class="category-count" id="countRoman">(0)</span>
+          </button>
+          <button type="button" class="category-tab" data-category="poesie">
+            <span>Poésie</span>
+            <span class="category-count" id="countPoesie">(0)</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- En-tête de section vitrine avec sélecteur de tri et curseur temps de lecture -->
+      <div class="showcase-header">
+        <h2 class="current-category-title" id="currentCategoryHeading">Tous les écrits</h2>
+        
+        <div class="showcase-controls">
+          <!-- Curseur / Bascule minimaliste pour les temps de lecture -->
+          <label class="reading-time-toggle" id="readingTimeToggle" title="Afficher ou masquer les temps de lecture et nombre de mots">
+            <input type="checkbox" id="toggleReadingMetrics" class="reading-toggle-input" aria-label="Afficher les temps de lecture et le nombre de mots">
+            <span class="reading-toggle-switch">
+              <span class="reading-toggle-handle"></span>
+            </span>
+            <span class="reading-toggle-text">Temps de lecture</span>
+          </label>
+
+          <!-- Sélecteur de tri -->
+          <div class="sort-control">
+            <label for="sortOrderSelect" class="sort-label">Trier :</label>
+            <select id="sortOrderSelect" class="sort-select" aria-label="Ordre d'affichage des écrits">
+              <option value="desc">Du plus récent au plus ancien</option>
+              <option value="asc">Du plus ancien au plus récent</option>
+              <option value="reading-asc">Temps de lecture (croissant)</option>
+              <option value="reading-desc">Temps de lecture (décroissant)</option>
+            </select>
+          </div>
+
+          <!-- Bouton minimaliste de déploiement de la recherche -->
+          <button type="button" class="btn-search-toggle" id="btnToggleSearch" aria-label="Rechercher" title="Rechercher un écrit">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Panneau de recherche dépliable en Glassmorphism -->
+      <div class="search-panel-container" id="searchPanelContainer" style="display: none;">
+        <div class="search-panel-glass">
+          <div class="search-input-wrapper">
+            <span class="search-input-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <input type="text" id="showcaseSearchInput" class="search-input" placeholder="Rechercher par mot-clé (titre, résumé, vers)..." autocomplete="off">
+            <button type="button" id="btnClearSearchInput" class="btn-clear-search" aria-label="Effacer la recherche" title="Effacer" style="display: none;">
+              &times;
+            </button>
+            <button type="button" id="btnCloseSearchPanel" class="btn-close-search" aria-label="Fermer la recherche" title="Fermer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Options avancées de recherche (Catégorie & Grille de tags) -->
+          <div class="search-advanced-options">
+            <div class="search-options-row">
+              <div class="search-category-filter">
+                <label for="searchCategorySelect" class="search-opt-label">Catégorie :</label>
+                <select id="searchCategorySelect" class="search-category-select">
+                  <option value="all">Toutes les catégories</option>
+                  <option value="nouvelle">Nouvelle</option>
+                  <option value="nouvelle-longue">Nouvelle longue</option>
+                  <option value="roman">Roman</option>
+                  <option value="poesie">Poésie</option>
+                </select>
+              </div>
+
+              <!-- Bouton Aléatoire 🎲 (aligné sur le sélecteur, tout à droite) -->
+              <button type="button" class="btn-random-pick" id="btnRandomPick" title="Choisir un texte aléatoirement">
+                <span class="random-dice-icon">🎲</span>
+                <span>Aléatoire</span>
+              </button>
+            </div>
+
+            <div class="search-tags-section" id="searchTagsSection">
+              <div class="search-tags-header">
+                <span class="search-opt-label">Filtrer par tags :</span>
+                <button type="button" class="btn-reset-tags" id="btnResetSelectedTags" style="display: none;">Tout désélectionner</button>
+              </div>
+              <div class="search-tags-grid" id="searchTagsGrid">
+                <!-- Injecté dynamiquement à partir des tags réels des écrits -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grille des écrits affichés dans la vitrine -->
+      <div class="showcase-grid" id="writingsContainer">
+        <!-- Rempli dynamiquement en JS (ou état vide si aucun écrit) -->
+      </div>
+    </main>
+
+    <!-- VUE 2 : ESPACE PERSONNEL (CADRRILLAGE) -->
+    <section class="personal-space-view" id="personalSpaceView" aria-hidden="true">
+      <div class="admin-header">
+        <div class="admin-title-area">
+          <h2>Espace personnel — Caddrillage</h2>
+          <p>Gestion et publication des écrits de la vitrine</p>
+        </div>
+        <div class="admin-header-actions">
+          <button type="button" class="btn-secondary" id="btnReturnShowcase">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Retour à la vitrine
+          </button>
+          <button type="button" class="btn-danger-outline" id="btnLogout">
+            Déconnexion
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-content-grid">
+
+        <!-- SECTION : PUBLIER UN NOUVEL ÉCRIT -->
+        <div class="admin-section">
+          <h3 class="section-heading">Publier un nouvel écrit</h3>
+          <p class="section-desc">Remplissez les détails et déposez votre document PDF pour l'ajouter à la vitrine.</p>
+
+          <form id="publishForm">
+            <div class="form-group">
+              <label class="form-label" for="pubTitle">Titre de l'écrit *</label>
+              <input type="text" id="pubTitle" class="form-input" placeholder="Ex: L'écho des cadrans" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="pubCategory">Catégorie *</label>
+              <select id="pubCategory" class="form-select" required>
+                <option value="nouvelle">Nouvelle</option>
+                <option value="nouvelle-longue">Nouvelle longue</option>
+                <option value="roman">Roman</option>
+                <option value="poesie">Poésie</option>
+              </select>
+            </div>
+
+            <!-- Résumé standard (pour les récits en prose) -->
+            <div class="form-group" id="pubSummaryGroup">
+              <label class="form-label" for="pubSummary">Résumé *</label>
+              <textarea id="pubSummary" class="form-textarea" placeholder="Rédigez un court résumé ou un avant-propos pour donner envie de lire..."></textarea>
+            </div>
+
+            <!-- Espace poème & prévisualisation (pour la poésie) -->
+            <div class="form-group" id="pubPoetryGroup" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                <label class="form-label" for="pubPoetryText" style="margin-bottom: 0;">Texte du poème (vers et strophes) *</label>
+                <span class="poetry-status-badge" id="pubPoetryStatusBadge">Extraction automatique depuis PDF</span>
+              </div>
+              <textarea id="pubPoetryText" class="form-textarea poetry-textarea" placeholder="Le texte de votre poème s'extraira automatiquement dès que vous aurez déposé le PDF. Vous pouvez aussi le coller ou l'ajuster ici vers par vers..."></textarea>
+              <div class="form-hint">Chaque vers, retour à la ligne et saut de strophe sera affiché sur la vitrine exactement tel qu'il est écrit ici.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="pubTags">Tags (définis par vous-même)</label>
+              <input type="text" id="pubTags" class="form-input" placeholder="Ex: Science-fiction, Mystère, Réflexion, Nuit (séparés par des virgules)">
+              <div class="form-hint">Séparez les tags par une virgule. Ex : Énigme, Suspense, Solitude</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="pubDisplayDate">Date de publication affichée</label>
+              <input type="text" id="pubDisplayDate" class="form-input" placeholder="Ex: Octobre 2026 (laisser vide pour la date d'aujourd'hui)">
+              <div class="form-hint">Tapez le texte de votre choix (ex: Octobre 2026). Si laissé vide, la date du jour sera utilisée.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Document PDF de l'écrit *</label>
+              <div class="pdf-upload-box" id="uploadDropZone">
+                <input type="file" id="pubPdfFile" accept="application/pdf" required>
+                <span class="upload-icon">📄</span>
+                <p class="upload-text">Cliquez ou glissez-déposez le fichier PDF ici</p>
+                <p class="upload-subtext">Format PDF uniquement (le texte poétique en sera extrait automatiquement)</p>
+              </div>
+              <div class="file-selected-status" id="fileStatusBox">
+                <div>
+                  <div class="file-name-text" id="selectedFileName">Nom_du_fichier.pdf</div>
+                  <div class="file-size-text" id="selectedFileSize">Taille : 0 Ko</div>
+                </div>
+                <button type="button" class="btn-sm-action" id="btnClearSelectedFile">Changer</button>
+              </div>
+            </div>
+
+            <!-- Indicateurs de lecture calculés automatiquement et modifiables (masqués pour la poésie) -->
+            <div class="form-group" id="pubMetricsGroup">
+              <label class="form-label">Détails de lecture (Pages, Mots, Temps estimé)</label>
+              <div class="form-row-metrics">
+                <div>
+                  <label class="form-sublabel" for="pubPageCount">Pages</label>
+                  <input type="number" id="pubPageCount" class="form-input" min="1" placeholder="Auto">
+                </div>
+                <div>
+                  <label class="form-sublabel" for="pubWordCount">Nombre de mots</label>
+                  <input type="number" id="pubWordCount" class="form-input" min="0" placeholder="Auto">
+                </div>
+                <div>
+                  <label class="form-sublabel" for="pubReadingTime">Temps de lecture estimé</label>
+                  <input type="text" id="pubReadingTime" class="form-input" placeholder="Ex: ~15 min ou 1 h 20">
+                </div>
+              </div>
+              <div class="form-hint" id="pubMetricsStatusHint">
+                Calculé automatiquement dès la sélection du PDF. Vous pouvez modifier ou personnaliser ces valeurs à votre convenance.
+              </div>
+            </div>
+
+            <div style="margin-top: 26px;">
+              <button type="submit" class="btn-primary" id="btnSubmitPublish">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Mettre dans la vitrine
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- SECTION : GESTION DES ÉCRITS DÉJÀ CHARGÉS DANS LA VITRINE -->
+        <div class="admin-section">
+          <h3 class="section-heading">Écrits déjà chargés dans la vitrine</h3>
+          <p class="section-desc">Consultez, modifiez les textes (résumé, titre, tags, remplacement du PDF) ou supprimez-les de la vitrine.</p>
+
+          <!-- Barre de recherche et curseur poésie dans l'espace personnel -->
+          <div class="admin-search-bar-row">
+            <div class="admin-search-input-wrap">
+              <span class="search-input-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input type="text" id="adminSearchInput" class="admin-search-input" placeholder="Filtrer vos écrits par titre ou mot-clé..." autocomplete="off">
+              <button type="button" id="btnClearAdminSearch" class="btn-clear-search" aria-label="Effacer" style="display: none;">&times;</button>
+            </div>
+
+            <!-- Curseur pour afficher ou masquer la poésie dans l'espace personnel -->
+            <label class="reading-time-toggle admin-poetry-toggle" id="adminPoetryToggleLabel" title="Afficher ou masquer les textes de poésie">
+              <input type="checkbox" id="toggleAdminPoetry" class="reading-toggle-input" checked aria-label="Afficher les textes de poésie">
+              <span class="reading-toggle-switch">
+                <span class="reading-toggle-handle"></span>
+              </span>
+              <span class="reading-toggle-text">Afficher poésie</span>
+            </label>
+          </div>
+
+          <div class="admin-writings-list" id="adminWritingsList">
+            <!-- Liste générée en JS -->
+          </div>
+
+          <!-- Zone d'exportation de l'ensemble des écrits -->
+          <div class="admin-export-area">
+            <button type="button" class="btn-export-all" id="btnExportAllArchive" title="Télécharger tous les écrits dans une archive ZIP">
+              <span class="export-icon">📦</span>
+              <span id="exportAllBtnText">Exporter tous les écrits (.zip)</span>
+            </button>
+            <p class="export-hint">
+              Télécharge une archive ZIP contenant l'ensemble de vos écrits classés par dossiers de catégories (Romans, Nouvelles, Poésies) avec leurs fichiers PDF et textes.
+            </p>
+          </div>
+        </div>
+
+        <!-- SECTION : RETOURS & COMMENTAIRES PRIVÉS DES LECTEURS -->
+        <div class="admin-section" id="adminCommentsSection">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;">
+            <h3 class="section-heading">Commentaires & Retours des lecteurs</h3>
+            <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;" id="commentsCountBadge">0 commentaire</span>
+          </div>
+          <p class="section-desc">Messages privés envoyés par vos lecteurs depuis la vitrine. Seul vous pouvez les lire ici dans votre espace personnel.</p>
+
+          <div class="admin-comments-list" id="adminCommentsList">
+            <!-- Liste des commentaires générée en JS -->
+          </div>
+        </div>
+
+        <!-- SECTION : PERSONNALISATION DU SITE & AVANT-PROPOS (MENU DÉROULANT / ACCORDÉON) -->
+        <div class="admin-section admin-identity-section" id="adminSiteIdentitySection">
+          <details class="admin-accordion" id="adminIdentityAccordion">
+            <summary class="admin-accordion-summary">
+              <div class="accordion-title-group">
+                <div class="accordion-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </div>
+                <div class="accordion-headings">
+                  <h3 class="section-heading accordion-heading-text">Personnalisation du site & Avant-propos</h3>
+                  <p class="section-desc accordion-desc-text">Modifier le titre, le slogan, la présentation de l'auteur et les thèmes</p>
+                </div>
+              </div>
+              <span class="accordion-chevron" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </summary>
+
+            <div class="admin-accordion-content">
+              <form id="adminIdentityForm">
+                <!-- 1. Titre du site -->
+                <div class="form-group">
+                  <label class="form-label" for="adminSiteTitleInput">Titre principal du site</label>
+                  <input type="text" id="adminSiteTitleInput" class="form-input" placeholder="L'antre du caddrillage">
+                  <div class="form-hint">Titre affiché tout en haut de la vitrine et dans l'onglet du navigateur.</div>
+                </div>
+
+                <!-- 2. Slogan / Sous-titre -->
+                <div class="form-group">
+                  <label class="form-label" for="adminSiteTaglineInput">Sous-titre / Slogan</label>
+                  <input type="text" id="adminSiteTaglineInput" class="form-input" placeholder="Recueil d'écrits, fictions et pensées littéraires">
+                  <div class="form-hint">Phrase affichée directement sous le titre principal.</div>
+                </div>
+
+                <!-- 3. Note À propos -->
+                <div class="form-group" style="margin-top: 22px;">
+                  <label class="form-label" for="adminAboutInput">Texte de la section « À propos »</label>
+                  <textarea id="adminAboutInput" class="form-textarea" rows="12" placeholder="Rédigez ou personnalisez votre présentation..."></textarea>
+                  <div class="form-hint">Ce texte s'affiche quand les visiteurs cliquent sur « À propos » en haut du site. Chaque saut de ligne forme un paragraphe.</div>
+                </div>
+
+                <!-- 4. Personnalisation des thèmes & ambiances -->
+                <div class="form-group theme-admin-editor-section">
+                  <label class="form-label">Personnalisation des textes & noms des thèmes</label>
+                  <div class="form-hint" style="margin-bottom: 14px;">
+                    Modifiez les noms, badges et descriptions des 10 thèmes affichés dans la galerie de lecture.
+                  </div>
+
+                  <div class="theme-admin-editor-grid" id="themeAdminEditorGrid">
+                    <!-- Rendu dynamiquement en JavaScript avec la DA du site -->
+                  </div>
+
+                  <div class="theme-admin-actions">
+                    <button type="button" class="btn-primary" id="btnSaveCustomThemes">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                      </svg>
+                      Mettre à jour les thèmes
+                    </button>
+                    <button type="button" class="btn-secondary" id="btnResetCustomThemesDefault" title="Rétablir les noms et descriptions d'origine pour tous les thèmes">
+                      Rétablir par défaut
+                    </button>
+                  </div>
+                </div>
+
+                <div class="admin-identity-actions">
+                  <button type="submit" class="btn-primary" id="btnSaveIdentity">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                      <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Enregistrer toutes les modifications
+                  </button>
+                  <button type="button" class="btn-secondary" id="btnResetIdentityDefault" title="Rétablir le titre, slogan et texte d'origine">
+                    Rétablir les valeurs par défaut
+                  </button>
+                </div>
+              </form>
+            </div>
+          </details>
+        </div>
+
+        <!-- SECTION : TABLEAU DE BORD DE L'AUTEUR & STATISTIQUES (MENU DÉROULANT / ACCORDÉON) -->
+        <div class="admin-section admin-identity-section admin-stats-section" id="adminStatsSection" style="margin-top: 24px;">
+          <details class="admin-accordion" id="adminStatsAccordion">
+            <summary class="admin-accordion-summary">
+              <div class="accordion-title-group">
+                <div class="accordion-icon-wrap" style="color: var(--accent);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                </div>
+                <div class="accordion-headings">
+                  <h3 class="section-heading accordion-heading-text">Tableau de bord & Statistiques de l'œuvre</h3>
+                  <p class="section-desc accordion-desc-text">Volume de rédaction, temps cumulé et répartition graphique par genre</p>
+                </div>
+              </div>
+              <span class="accordion-chevron" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </summary>
+
+            <div class="admin-accordion-content admin-stats-content" id="adminStatsContent">
+              <div class="stats-loading-placeholder" style="padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 0.92rem;">
+                Calcul des métriques et des graphiques de l'œuvre...
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- SECTION : RECOMPILATION & INSTALLATEURS HORS-LIGNE (ACCORDÉON) -->
+        <div class="admin-section admin-identity-section" id="adminRebuildSection" style="margin-top: 24px;">
+          <details class="admin-accordion" id="adminRebuildAccordion">
+            <summary class="admin-accordion-summary">
+              <div class="accordion-title-group">
+                <div class="accordion-icon-wrap" style="color: var(--accent);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                </div>
+                <div class="accordion-headings">
+                  <h3 class="section-heading accordion-heading-text">Recompiler l'application & Installateurs avec tous vos textes</h3>
+                  <p class="section-desc accordion-desc-text">Générer un nouvel installateur (.dmg, .app, .exe, .AppImage) avec 100% de vos écrits récents embarqués</p>
+                </div>
+              </div>
+              <span class="accordion-chevron" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </summary>
+
+            <div class="admin-accordion-content admin-rebuild-content" id="adminRebuildContent">
+              <div class="rebuild-intro-card">
+                <p>
+                  Lorsque vous ajoutez de nouveaux écrits (en ligne ou hors-ligne), cette option vous permet de <strong>recompiler l'application</strong> ou d'exporter un installateur autonome contenant <strong>l'intégralité de vos textes actuels directement embarqués</strong>.
+                </p>
+                <p style="margin-top: 8px; color: var(--text-muted); font-size: 0.9rem;">
+                  Toute personne (ou vous-même sur un autre ordinateur) installant ce nouveau fichier disposera immédiatement de tous vos textes, sans aucun besoin d'une connexion internet pour les récupérer.
+                </p>
+              </div>
+
+              <div class="rebuild-status-grid">
+                <div class="rebuild-status-box">
+                  <span class="rebuild-status-label">Écrits à embarquer</span>
+                  <span class="rebuild-status-val" id="rebuildTotalCount">--</span>
+                </div>
+                <div class="rebuild-status-box">
+                  <span class="rebuild-status-label">Synchro cloud (Supabase)</span>
+                  <span class="rebuild-status-val" id="rebuildSyncState">Vérification...</span>
+                </div>
+                <div class="rebuild-status-box">
+                  <span class="rebuild-status-label">File d'attente hors-ligne</span>
+                  <span class="rebuild-status-val" id="rebuildQueueState">0 en attente</span>
+                </div>
+              </div>
+
+              <div class="rebuild-actions-list">
+                <!-- Action 1 : Recompiler macOS (.app / .dmg) -->
+                <div class="rebuild-action-item">
+                  <div class="rebuild-action-info">
+                    <h4>Recompiler l'application macOS (.app & .dmg)</h4>
+                    <p>Recompile instantanément le binaire natif macOS Apple Silicon et génère l'image disque <code>.dmg</code> dans le dossier du projet avec tous vos derniers textes.</p>
+                  </div>
+                  <button type="button" class="btn-primary" id="btnRebuildMacApp">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span>Lancer la re-compilation macOS</span>
+                  </button>
+                </div>
+
+                <!-- Action 2 : Télécharger le pack de sources multiplateforme -->
+                <div class="rebuild-action-item">
+                  <div class="rebuild-action-info">
+                    <h4>Pack installateur multiplateforme (Windows, Linux, Mac)</h4>
+                    <p>Télécharge une archive ZIP prête à l'emploi contenant le site complet, la base de données de vos écrits injectée, et les scripts de build pour Windows (.exe), Linux (.AppImage) et Mac.</p>
+                  </div>
+                  <button type="button" class="btn-secondary" id="btnExportMultiplatformPackage">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Télécharger le pack multiplateforme (.zip)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div id="rebuildLogBox" class="rebuild-log-box" style="display: none;">
+                <div class="rebuild-log-header">
+                  <span>Journal de compilation</span>
+                  <span id="rebuildSpinner" class="spinner-sm"></span>
+                </div>
+                <pre id="rebuildLogText" class="rebuild-log-text"></pre>
+              </div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- =========================================================
+       MODALE DE CONNEXION À L'ESPACE PERSONNEL
+       (Caddrillage / Azerty4735)
+       ========================================================= -->
+  <div class="modal-backdrop" id="loginModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Espace personnel</h3>
+        <button type="button" class="btn-close-modal" id="btnCloseLoginModal" aria-label="Fermer">&times;</button>
+      </div>
+      <form id="loginForm">
+        <div class="modal-body">
+          <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px;">
+            Veuillez entrer vos identifiants pour accéder à l'espace d'administration et publier vos écrits.
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="loginUser">Nom d'utilisateur</label>
+            <input type="text" id="loginUser" class="form-input" placeholder="Nom d'utilisateur" autocomplete="username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPass">Mot de passe</label>
+            <input type="password" id="loginPass" class="form-input" placeholder="Mot de passe" autocomplete="current-password" required>
+          </div>
+          <div id="loginErrorMsg" style="display: none; color: #ef4444; font-size: 0.88rem; margin-top: 8px;">
+            Nom d'utilisateur ou mot de passe incorrect.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btnCancelLogin">Annuler</button>
+          <button type="submit" class="btn-primary">Se connecter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE LECTEUR PDF (VISIONNER EN LIGNE)
+       ========================================================= -->
+  <div class="modal-backdrop" id="pdfReaderModal">
+    <div class="modal-container pdf-reader-modal">
+      <div class="modal-header">
+        <div class="reader-header-left">
+          <span style="font-size: 1.2rem;">📖</span>
+          <h3 class="reader-doc-title" id="readerTitle">Titre de l'écrit</h3>
+        </div>
+        <div class="reader-header-actions">
+          <a href="#" class="btn-secondary" id="readerDownloadBtn" download>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Télécharger
+          </a>
+          <button type="button" class="btn-secondary" id="readerCommentBtn" title="Laisser un commentaire à l'auteur">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Commenter
+          </button>
+          <button type="button" class="btn-secondary" id="readerOpenTabBtn" title="Ouvrir dans un nouvel onglet">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            Plein écran
+          </button>
+          <button type="button" class="btn-close-modal" id="btnCloseReaderModal" aria-label="Fermer le lecteur">&times;</button>
+        </div>
+      </div>
+      <div class="pdf-viewer-frame-container">
+        <iframe id="pdfViewerFrame" class="pdf-viewer-frame" title="Lecteur de document PDF"></iframe>
+      </div>
+      <div class="pdf-mobile-fallback">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px;">
+          Sur certains appareils mobiles, le document PDF s'affiche idéalement dans un onglet dédié.
+        </p>
+        <button type="button" class="btn-primary" id="readerMobileOpenBtn">
+          Ouvrir le PDF en plein écran
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE DE MODIFICATION D'UN ÉCRIT
+       ========================================================= -->
+  <div class="modal-backdrop" id="editModal">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <h3 class="modal-title">Modifier l'écrit</h3>
+        <button type="button" class="btn-close-modal" id="btnCloseEditModal" aria-label="Fermer">&times;</button>
+      </div>
+      <form id="editForm">
+        <div class="modal-body">
+          <input type="hidden" id="editId">
+
+          <div class="form-group">
+            <label class="form-label" for="editTitle">Titre de l'écrit *</label>
+            <input type="text" id="editTitle" class="form-input" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editCategory">Catégorie *</label>
+            <select id="editCategory" class="form-select" required>
+              <option value="nouvelle">Nouvelle</option>
+              <option value="nouvelle-longue">Nouvelle longue</option>
+              <option value="roman">Roman</option>
+              <option value="poesie">Poésie</option>
+            </select>
+          </div>
+
+          <!-- Résumé standard (pour les récits en prose) -->
+          <div class="form-group" id="editSummaryGroup">
+            <label class="form-label" for="editSummary">Résumé *</label>
+            <textarea id="editSummary" class="form-textarea"></textarea>
+          </div>
+
+          <!-- Espace poème & édition des vers (pour la poésie) -->
+          <div class="form-group" id="editPoetryGroup" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+              <label class="form-label" for="editPoetryText" style="margin-bottom: 0;">Texte du poème (vers et strophes)</label>
+              <span class="poetry-status-badge">Poésie</span>
+            </div>
+            <textarea id="editPoetryText" class="form-textarea poetry-textarea" placeholder="Texte du poème..."></textarea>
+            <div class="form-hint">Modifiez ou ajustez chaque vers et saut de strophe directement ici.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editTags">Tags (séparés par des virgules)</label>
+            <input type="text" id="editTags" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editDisplayDate">Date de publication affichée</label>
+            <input type="text" id="editDisplayDate" class="form-input" placeholder="Ex: Octobre 2026 ou 13 octobre 2026">
+            <div class="form-hint">Texte affiché sur la vitrine pour cet écrit.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Remplacer le document PDF (optionnel)</label>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;" id="editCurrentPdfInfo">
+              PDF actuel conservé : document.pdf
+            </p>
+            <div class="pdf-upload-box" id="editUploadDropZone">
+              <input type="file" id="editPdfFile" accept="application/pdf">
+              <span class="upload-icon">📄</span>
+              <p class="upload-text">Sélectionner un nouveau PDF pour remplacer l'existant</p>
+              <p class="upload-subtext">Laissez vide pour conserver le PDF actuel</p>
+            </div>
+            <div class="file-selected-status" id="editFileStatusBox">
+              <div>
+                <div class="file-name-text" id="editSelectedFileName">Nouveau_fichier.pdf</div>
+                <div class="file-size-text" id="editSelectedFileSize">Taille : 0 Ko</div>
+              </div>
+              <button type="button" class="btn-sm-action" id="btnCancelEditPdf">Annuler le remplacement</button>
+            </div>
+          </div>
+
+          <!-- Indicateurs de lecture modifiables -->
+          <div class="form-group" id="editMetricsGroup">
+            <label class="form-label">Détails de lecture (Pages, Mots, Temps estimé)</label>
+            <div class="form-row-metrics">
+              <div>
+                <label class="form-sublabel" for="editPageCount">Pages</label>
+                <input type="number" id="editPageCount" class="form-input" min="1" placeholder="Auto">
+              </div>
+              <div>
+                <label class="form-sublabel" for="editWordCount">Nombre de mots</label>
+                <input type="number" id="editWordCount" class="form-input" min="0" placeholder="Auto">
+              </div>
+              <div>
+                <label class="form-sublabel" for="editReadingTime">Temps de lecture estimé</label>
+                <input type="text" id="editReadingTime" class="form-input" placeholder="Ex: ~15 min ou 1 h 20">
+              </div>
+            </div>
+            <div class="form-hint" id="editMetricsStatusHint">
+              Modifiable à tout moment. Si un nouveau PDF est chargé, ces valeurs sont recalculées automatiquement.
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btnCancelEditModal">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer les modifications</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE LAISSER UN COMMENTAIRE (PRIVÉ POUR L'AUTEUR)
+       ========================================================= -->
+  <div class="modal-backdrop" id="commentModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" id="commentModalTitle">Laisser un mot à l'auteur</h3>
+        <button type="button" class="btn-close-modal" id="btnCloseCommentModal" aria-label="Fermer">&times;</button>
+      </div>
+      <form id="commentForm">
+        <div class="modal-body">
+          <input type="hidden" id="commentWritingId">
+          <input type="hidden" id="commentWritingTitle">
+
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+            🔒 <em>Ce message est privé. Il ne sera pas affiché publiquement sur le site, mais transmis directement à l'auteur dans son espace personnel.</em>
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="commentAuthorName">Votre nom ou pseudo (optionnel)</label>
+            <input type="text" id="commentAuthorName" class="form-input" placeholder="Ex: Un lecteur attentif">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="commentMessage">Votre message ou impression de lecture *</label>
+            <textarea id="commentMessage" class="form-textarea" style="min-height: 180px;" maxlength="6000" placeholder="Partagez vos impressions, analyses, ressentis sur cet écrit..." required></textarea>
+            <div class="char-counter-row" id="charCounterRow">
+              <span id="charCountDisplay">0</span> / 6000 caractères
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btnCancelComment">Annuler</button>
+          <button type="submit" class="btn-primary" id="btnSubmitComment">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Envoyer à l'auteur
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE DE SÉLECTION ALÉATOIRE (🎲)
+       ========================================================= -->
+  <div class="modal-backdrop" id="randomModal">
+    <div class="modal-container small">
+      <div class="modal-header">
+        <h3 class="modal-title">🎲 Lecture au hasard</h3>
+        <button type="button" class="btn-close-modal" id="btnCloseRandomModal" aria-label="Fermer">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 1.05rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">
+          Choisir un texte pour moi aléatoirement
+        </p>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 22px;">
+          Laissez le hasard vous guider à travers les écrits de l'Antre.
+        </p>
+
+        <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 6px;">
+          <!-- Curseur pour inclure ou non les poésies dans cette sélection -->
+          <label class="reading-time-toggle" id="randomPoetryToggleLabel" title="Inclure ou non les poésies dans cette sélection">
+            <input type="checkbox" id="toggleRandomPoetry" class="reading-toggle-input" checked aria-label="Inclure les poésies dans le tirage aléatoire">
+            <span class="reading-toggle-switch">
+              <span class="reading-toggle-handle"></span>
+            </span>
+            <span class="reading-toggle-text">Inclure les poésies</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnCancelRandomModal">Annuler</button>
+        <button type="button" class="btn-primary" id="btnConfirmRandomPick">
+          <span>🎲</span>
+          <span>Découvrir</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE DE CONFIRMATION DE SUPPRESSION
+       ========================================================= -->
+  <div class="modal-backdrop" id="confirmDeleteModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirmer la suppression</h3>
+        <button type="button" class="btn-close-modal" id="btnCloseDeleteModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 1rem; color: var(--text);" id="deleteConfirmText">
+          Êtes-vous sûr de vouloir supprimer cet écrit de la vitrine ?
+        </p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">
+          Cette action retirera définitivement le texte et son fichier PDF de votre site.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnCancelDelete">Annuler</button>
+        <button type="button" class="btn-danger-outline" id="btnConfirmDelete">Supprimer définitivement</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE À PROPOS DE L'AUTEUR (MATHIAS / CADDRILLAGE)
+       ========================================================= -->
+  <div class="modal-backdrop" id="aboutModal">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <h3 class="modal-title">À propos de l'auteur</h3>
+        <button type="button" class="btn-close-modal" id="btnCloseAboutModal" aria-label="Fermer">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="about-text-content" id="aboutModalContent">
+          <!-- Injecté dynamiquement en JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnDismissAboutModal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE GALERIE DES AMBIANCES & THÈMES
+       ========================================================= -->
+  <div class="modal-backdrop" id="themeGalleryModal">
+    <div class="modal-container large theme-gallery-modal">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Ambiances & Thèmes de lecture</h3>
+          <p style="margin-top: 4px; font-size: 0.92rem; color: var(--text-muted);">
+            Personnalisez l'atmosphère visuelle de l'Antre selon votre humeur et votre confort de lecture.
+          </p>
+        </div>
+        <button type="button" class="btn-close-modal" id="btnCloseThemeGalleryModal" aria-label="Fermer">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="theme-gallery-grid" id="themeGalleryGrid">
+          <!-- Carte 1 : Sombre -->
+          <button type="button" class="theme-gallery-card" data-theme="dark">
+            <div class="theme-card-preview preview-dark">
+              <span class="preview-dot dot-dark"></span>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Sombre</span>
+                <span class="theme-card-badge">Défaut</span>
+              </div>
+              <p class="theme-card-desc">Fond anthracite feutré et contrastes doux. Reposant pour les yeux.</p>
+            </div>
+          </button>
+
+          <!-- Carte 2 : Clair -->
+          <button type="button" class="theme-gallery-card" data-theme="white">
+            <div class="theme-card-preview preview-white">
+              <span class="preview-dot dot-white"></span>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Clair</span>
+              </div>
+              <p class="theme-card-desc">Luminosité épurée et papier blanc contemporain. Idéal en plein jour.</p>
+            </div>
+          </button>
+
+          <!-- Carte 3 : Galaxie -->
+          <button type="button" class="theme-gallery-card" data-theme="galaxy">
+            <div class="theme-card-preview preview-galaxy" style="background-image: url('galaxy.jpeg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Galaxie</span>
+                <span class="theme-card-badge">Cosmique</span>
+              </div>
+              <p class="theme-card-desc">Immersion stellaire sous les nébuleuses et l'infini cosmique.</p>
+            </div>
+          </button>
+
+          <!-- Carte 4 : OLED -->
+          <button type="button" class="theme-gallery-card" data-theme="oled">
+            <div class="theme-card-preview preview-oled">
+              <span class="preview-dot dot-oled"></span>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">OLED</span>
+                <span class="theme-card-badge">Éco-batterie</span>
+              </div>
+              <p class="theme-card-desc">Noir absolu 100%. Éteint les pixels des écrans OLED pour un contraste parfait.</p>
+            </div>
+          </button>
+
+          <!-- Carte 5 : XP -->
+          <button type="button" class="theme-gallery-card" data-theme="xp">
+            <div class="theme-card-preview preview-xp" style="background-image: url('xp.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">XP</span>
+                <span class="theme-card-badge">Nostalgie</span>
+              </div>
+              <p class="theme-card-desc">La légendaire colline verdoyante sous une voûte céleste étoilée.</p>
+            </div>
+          </button>
+
+          <!-- Carte 6 : Caddri -->
+          <button type="button" class="theme-gallery-card" data-theme="caddri">
+            <div class="theme-card-preview preview-caddri" style="background-image: url('caddri.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Caddri</span>
+                <span class="theme-card-badge">Signature</span>
+              </div>
+              <p class="theme-card-desc">Quadrillage d'écolier noir et blanc, hommage direct à l'Antre du caddrillage.</p>
+            </div>
+          </button>
+
+          <!-- Carte 7 : Forêt -->
+          <button type="button" class="theme-gallery-card" data-theme="forest">
+            <div class="theme-card-preview preview-forest" style="background-image: url('forest.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Forêt</span>
+                <span class="theme-card-badge">Nature</span>
+              </div>
+              <p class="theme-card-desc">Sentier de mousse et sapins centenaires. Mystique et contemplatif.</p>
+            </div>
+          </button>
+
+          <!-- Carte 8 : Parchemin -->
+          <button type="button" class="theme-gallery-card" data-theme="parchemin">
+            <div class="theme-card-preview preview-parchemin" style="background-image: url('parchemin.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Parchemin</span>
+                <span class="theme-card-badge">Manuscrit</span>
+              </div>
+              <p class="theme-card-desc">Texture de vieux papier kraft froissé et encres chaudes. Très chaleureux.</p>
+            </div>
+          </button>
+
+          <!-- Carte 9 : Matrix -->
+          <button type="button" class="theme-gallery-card" data-theme="matrix">
+            <div class="theme-card-preview preview-matrix" style="background-image: url('matrix.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Matrix</span>
+                <span class="theme-card-badge">Cyber</span>
+              </div>
+              <p class="theme-card-desc">Pluie de code vert néon avec décodage progressif en cascade de vos textes.</p>
+            </div>
+          </button>
+
+          <!-- Carte 10 : Backroom -->
+          <button type="button" class="theme-gallery-card" data-theme="backroom">
+            <div class="theme-card-preview preview-backroom" style="background-image: url('backroom.jpg');"></div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Backroom</span>
+                <span class="theme-card-badge">Liminal</span>
+              </div>
+              <p class="theme-card-desc">Labyrinthe infini de pièces jaunâtres et bourdonnement fluorescent. Étrange et mystérieux.</p>
+            </div>
+          </button>
+
+          <!-- Carte 11 : Halloween 2026 -->
+          <button type="button" class="theme-gallery-card" data-theme="halloween">
+            <div class="theme-card-preview preview-halloween">
+              <span class="preview-dot dot-halloween"></span>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header-row">
+                <span class="theme-card-title">Halloween 2026</span>
+                <span class="theme-card-badge">Saisonnier</span>
+              </div>
+              <p class="theme-card-desc">Brume nocturne et citrouille d'automne. De discrets petits spectres dérivent dans la nuit.</p>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnDismissThemeGalleryModal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODALE DE TÉLÉCHARGEMENT DE L'APPLICATION
+       (macOS, Windows, Linux, Android)
+       ========================================================= -->
+  <div class="modal-backdrop" id="downloadAppModal">
+    <div class="modal-container large download-modal-container">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="download-modal-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" style="margin: 0;">L'antre du caddrillage — Application</h3>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Accédez à tous vos écrits hors-ligne avec confort maximal</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btnCloseDownloadAppModal" aria-label="Fermer">&times;</button>
+      </div>
+
+      <div class="modal-body download-modal-body">
+
+        <!-- Carte Recommandée selon l'OS détecté -->
+        <div class="download-detected-card" id="downloadDetectedCard">
+          <div class="detected-badge">
+            <span class="detected-dot"></span>
+            <span id="detectedOSLabel">Plateforme détectée : macOS (Apple Silicon)</span>
+          </div>
+
+          <div class="detected-hero-content">
+            <div class="detected-hero-info">
+              <h4 id="detectedHeroTitle">Application native pour macOS</h4>
+              <p id="detectedHeroDesc">
+                Application native ultra-rapide optimisée pour Apple Silicon (M1, M2, M3, M4). Fonctionne à 100% sans connexion internet avec tous les écrits intégrés.
+              </p>
+              <div class="download-meta-tags">
+                <span class="meta-tag">⚡ ~2.5 Mo</span>
+                <span class="meta-tag">🔋 Faible consommation</span>
+                <span class="meta-tag">📖 Liseuse PDF intégrée</span>
+                <span class="meta-tag">🔄 Synchro auto</span>
+              </div>
+            </div>
+
+            <div class="detected-hero-actions">
+              <a href="L'antre du caddrillage.dmg" download="L'antre du caddrillage.dmg" class="btn-primary btn-download-primary" id="btnMainDownload">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span id="btnMainDownloadText">Télécharger pour macOS (.dmg)</span>
+              </a>
+              <span class="download-sub-hint" id="btnMainDownloadSubtext">Installateur avec glisser-déposer dans /Applications</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Avantages de l'application -->
+        <div class="download-features-grid">
+          <div class="download-feature-item">
+            <div class="feature-icon">📶</div>
+            <div class="feature-text">
+              <strong>100% Autonome & Hors-ligne</strong>
+              <p>Lisez l'ensemble des 60+ romans, nouvelles et poèmes même dans le train, l'avion ou en zone blanche.</p>
+            </div>
+          </div>
+          <div class="download-feature-item">
+            <div class="feature-icon">🔄</div>
+            <div class="feature-text">
+              <strong>Synchronisation transparente</strong>
+              <p>L'auteur peut ajouter des textes hors-ligne : ils sont conservés localement puis synchronisés dès le retour du réseau.</p>
+            </div>
+          </div>
+          <div class="download-feature-item">
+            <div class="feature-icon">🎭</div>
+            <div class="feature-text">
+              <strong>Tous les 11 univers & thèmes</strong>
+              <p>Halloween 2026 et ses fantômes éthérés, Backroom, Galaxie, Windows XP, Parchemin, Forêt enchantée...</p>
+            </div>
+          </div>
+          <div class="download-feature-item">
+            <div class="feature-icon">📦</div>
+            <div class="feature-text">
+              <strong>Export ZIP & Sauvegardes</strong>
+              <p>Exportez toute votre bibliothèque en un clic sous forme d'archive complète classée par genre.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bouton pour afficher toutes les versions -->
+        <div class="all-versions-toggle-wrap">
+          <button type="button" class="btn-toggle-all-versions" id="btnToggleAllVersions">
+            <span>Voir toutes les versions & plateformes disponibles</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Liste complète de toutes les versions (macOS, Windows, Linux, Android) -->
+        <div class="all-platforms-grid" id="allPlatformsGrid" style="display: none;">
+          
+          <!-- Plateforme macOS -->
+          <div class="platform-card" data-platform="macos">
+            <div class="platform-header">
+              <div class="platform-title-group">
+                <span class="platform-os-icon">🍎</span>
+                <div>
+                  <h5>macOS (Apple Silicon & Intel)</h5>
+                  <span class="platform-subtitle">macOS 11 Big Sur, Monterey, Ventura, Sonoma, Sequoia+</span>
+                </div>
+              </div>
+              <span class="platform-badge-status available">Disponible</span>
+            </div>
+            <p class="platform-desc">
+              Application native Cocoa / WebKit 64-bit arm64 & x86_64. Aucune dépendance externe, fluide et économe.
+            </p>
+            <div class="platform-actions">
+              <a href="L'antre du caddrillage.dmg" download="L'antre du caddrillage.dmg" class="btn-sm-download">
+                <span>Télécharger l'image disque (.dmg)</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Plateforme Windows -->
+          <div class="platform-card" data-platform="windows">
+            <div class="platform-header">
+              <div class="platform-title-group">
+                <span class="platform-os-icon">🪟</span>
+                <div>
+                  <h5>Windows (10 & 11)</h5>
+                  <span class="platform-subtitle">Architecture x64 / x86</span>
+                </div>
+              </div>
+              <span class="platform-badge-status available">Disponible</span>
+            </div>
+            <p class="platform-desc">
+              Exécutable autonome Windows avec WebView2 natif. Conserve tous vos écrits hors-ligne et se synchronise dès que le réseau est disponible.
+            </p>
+            <div class="platform-actions">
+              <a href="https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.exe" class="btn-sm-download" target="_blank" rel="noopener">
+                <span>Télécharger pour Windows (.exe)</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Plateforme Linux -->
+          <div class="platform-card" data-platform="linux">
+            <div class="platform-header">
+              <div class="platform-title-group">
+                <span class="platform-os-icon">🐧</span>
+                <div>
+                  <h5>Linux (.AppImage / WebKitGTK)</h5>
+                  <span class="platform-subtitle">Ubuntu, Debian, Fedora, Arch Linux...</span>
+                </div>
+              </div>
+              <span class="platform-badge-status available">Disponible</span>
+            </div>
+            <p class="platform-desc">
+              Format universel sans installation. Fonctionne sur toutes les distributions Linux récentes.
+            </p>
+            <div class="platform-actions">
+              <a href="https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.AppImage" class="btn-sm-download" target="_blank" rel="noopener">
+                <span>Télécharger pour Linux (.AppImage)</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Plateforme Android -->
+          <div class="platform-card" data-platform="android">
+            <div class="platform-header">
+              <div class="platform-title-group">
+                <span class="platform-os-icon">🤖</span>
+                <div>
+                  <h5>Android (.apk)</h5>
+                  <span class="platform-subtitle">Smartphones & tablettes Android 8.0+</span>
+                </div>
+              </div>
+              <span class="platform-badge-status available">Disponible</span>
+            </div>
+            <p class="platform-desc">
+              Application mobile complète avec icône dédiée. Lisez tous les romans, nouvelles et poèmes hors-ligne sur votre téléphone.
+            </p>
+            <div class="platform-actions">
+              <a href="https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.apk" class="btn-sm-download" target="_blank" rel="noopener">
+                <span>Télécharger le package Android (.apk)</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnDismissDownloadAppModal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conteneur des notifications Toast -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Librairies locales (autonomie totale hors-ligne avec fallback CDN automatique) -->
+  <script src="libs/supabase.min.js"></script>
+  <script>
+    if (!window.supabase) {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
+    }
+  </script>
+
+  <script src="libs/pdf.min.js"></script>
+  <script>
+    if (!window.pdfjsLib) {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
+    }
+  </script>
+
+  <script src="libs/jszip.min.js"></script>
+  <script>
+    if (!window.JSZip) {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- Logique applicative JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
