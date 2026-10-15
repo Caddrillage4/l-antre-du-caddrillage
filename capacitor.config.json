@@ -1,8 +1,7 @@
 {
   "appId": "com.caddrillage.lantre",
   "appName": "L'antre du caddrillage",
-  "webDir": ".",
-  "bundledWebRuntime": false,
+  "webDir": "www",
   "server": {
     "androidScheme": "https",
     "cleartext": true
