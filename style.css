@@ -4375,3 +4375,80 @@ body.theme-galaxy .poetry-fade-overlay {
   }
 }
 
+/* =========================================================
+   CARTE DE MISE À JOUR DE L'APPLICATION
+   ========================================================= */
+.app-update-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-update-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.app-update-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-update-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.app-update-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   ZONE D'EXPORTATION D'IMAGE DU TABLEAU DE BORD (STATS)
+   ========================================================= */
+.stats-export-box {
+  margin-top: 24px;
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.stats-export-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stats-export-desc {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+

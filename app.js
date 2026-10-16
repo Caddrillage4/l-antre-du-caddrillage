@@ -5000,8 +5000,434 @@ async function renderAdminDashboardStats() {
           </div>
         </div>
       </div>
+
+      <!-- 4. Zone d'exportation de l'image des statistiques -->
+      <div class="stats-export-box">
+        <div class="stats-export-text-group">
+          <h4 class="stats-export-title">Export visuel du tableau de bord</h4>
+          <p class="stats-export-desc">Générez et téléchargez une image haute résolution (PNG) de l'ensemble de vos statistiques, telle que présentée sur le site.</p>
+        </div>
+        <button type="button" class="btn-primary btn-export-stats-image" id="btnExportStatsImage">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <span id="btnExportStatsText">Exporter les statistiques (Image .png)</span>
+        </button>
+      </div>
     </div>
   `;
+
+  // Attacher l'écouteur du bouton d'export d'image des statistiques
+  const exportBtn = document.getElementById('btnExportStatsImage');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      exportDashboardStatsAsImage({
+        totalWords,
+        formattedTime,
+        totalPages,
+        totalCount,
+        categoryMeta,
+        itemsWithMetrics,
+        top3
+      });
+    });
+  }
+}
+
+function drawCanvasRoundRect(ctx, x, y, w, h, r) {
+  let radius = r;
+  if (typeof radius === 'number') {
+    radius = { tl: radius, tr: radius, br: radius, bl: radius };
+  }
+  ctx.beginPath();
+  ctx.moveTo(x + radius.tl, y);
+  ctx.lineTo(x + w - radius.tr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
+  ctx.lineTo(x + w, y + h - radius.br);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
+  ctx.lineTo(x + radius.bl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
+  ctx.lineTo(x, y + radius.tl);
+  ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+  ctx.closePath();
+}
+
+async function exportDashboardStatsAsImage(statsData) {
+  const exportBtn = document.getElementById('btnExportStatsImage');
+  const exportBtnText = document.getElementById('btnExportStatsText');
+
+  if (exportBtn) exportBtn.disabled = true;
+  if (exportBtnText) exportBtnText.textContent = "Génération de l'image PNG...";
+
+  try {
+    const width = 1200;
+    const height = 960;
+    const dpr = 2; // Rendu ultra-net Retina 2400x1920
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error("Impossible d'initialiser le contexte Canvas");
+
+    ctx.scale(dpr, dpr);
+
+    // 1. Fond principal dégradé sombre velouté
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, '#090d16');
+    bgGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Halo d'ambiance cosmique/bleu glacé au sommet
+    const haloGrad = ctx.createRadialGradient(width / 2, 0, 10, width / 2, 0, 600);
+    haloGrad.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
+    haloGrad.addColorStop(1, 'rgba(9, 13, 22, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.fillRect(0, 0, width, 500);
+
+    // Bordure extérieure avec coins arrondis
+    drawCanvasRoundRect(ctx, 16, 16, width - 32, height - 32, 20);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const paddingX = 48;
+    let curY = 64;
+
+    // 2. En-tête (Titre du site & Slogan & Date d'export)
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = "bold 26px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("L'ANTRE DU CADDRILLAGE", paddingX, curY);
+
+    // Badge Date à droite
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const dateBadgeText = `Exporté le ${dateFormatted}`;
+    ctx.font = "600 13px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    const dateBadgeW = ctx.measureText(dateBadgeText).width + 24;
+    const dateBadgeX = width - paddingX - dateBadgeW;
+    drawCanvasRoundRect(ctx, dateBadgeX, curY - 22, dateBadgeW, 28, 14);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#7dd3fc';
+    ctx.fillText(dateBadgeText, dateBadgeX + 12, curY - 4);
+
+    curY += 24;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = "15px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("Tableau de bord & Statistiques complètes de l'œuvre", paddingX, curY);
+
+    curY += 24;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.moveTo(paddingX, curY);
+    ctx.lineTo(width - paddingX, curY);
+    ctx.stroke();
+
+    curY += 28;
+
+    // 3. Les 4 Cartes KPI
+    const kpiW = (width - paddingX * 2 - 36) / 4;
+    const kpiH = 100;
+    const kpiData = [
+      {
+        icon: '✍️',
+        val: statsData.totalWords.toLocaleString('fr-FR'),
+        label: 'Mots rédigés',
+        sub: "Volume total de l'œuvre",
+        color: '#f8fafc'
+      },
+      {
+        icon: '⏳',
+        val: statsData.formattedTime,
+        label: 'Temps cumulé',
+        sub: "D'immersion totale",
+        color: '#38bdf8'
+      },
+      {
+        icon: '📄',
+        val: statsData.totalPages.toLocaleString('fr-FR'),
+        label: 'Pages cumulées',
+        sub: 'Textes & manuscrits',
+        color: '#34d399'
+      },
+      {
+        icon: '📚',
+        val: String(statsData.totalCount),
+        label: 'Textes au total',
+        sub: '4 genres littéraires',
+        color: '#a78bfa'
+      }
+    ];
+
+    kpiData.forEach((kpi, idx) => {
+      const kx = paddingX + idx * (kpiW + 12);
+      drawCanvasRoundRect(ctx, kx, curY, kpiW, kpiH, 14);
+      ctx.fillStyle = 'rgba(18, 24, 38, 0.75)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Icône
+      ctx.font = "20px 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+      ctx.fillText(kpi.icon, kx + 16, curY + 34);
+
+      // Valeur
+      ctx.fillStyle = kpi.color;
+      ctx.font = "bold 24px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(kpi.val, kx + 50, curY + 36);
+
+      // Label
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = "600 14px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(kpi.label, kx + 16, curY + 64);
+
+      // Sub
+      ctx.fillStyle = '#64748b';
+      ctx.font = "12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(kpi.sub, kx + 16, curY + 84);
+    });
+
+    curY += kpiH + 28;
+
+    // 4. Jauge segmentée proportionnelle
+    const chartCardW = width - paddingX * 2;
+    const chartCardH = 150;
+    drawCanvasRoundRect(ctx, paddingX, curY, chartCardW, chartCardH, 14);
+    ctx.fillStyle = 'rgba(18, 24, 38, 0.75)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Titre de la carte
+    ctx.fillStyle = '#f1f5f9';
+    ctx.font = "bold 16px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("Répartition générale de l'œuvre", paddingX + 20, curY + 32);
+
+    // Badge nombre d'écrits
+    const totalBadgeText = `${statsData.totalCount} écrits publiés`;
+    ctx.font = "600 12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    const totalBadgeW = ctx.measureText(totalBadgeText).width + 18;
+    const totalBadgeX = paddingX + chartCardW - totalBadgeW - 20;
+    drawCanvasRoundRect(ctx, totalBadgeX, curY + 16, totalBadgeW, 24, 12);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fill();
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(totalBadgeText, totalBadgeX + 9, curY + 32);
+
+    // Barre proportionnelle segmentée
+    const barX = paddingX + 20;
+    const barY = curY + 54;
+    const barW = chartCardW - 40;
+    const barH = 18;
+
+    drawCanvasRoundRect(ctx, barX, barY, barW, barH, 9);
+    ctx.fillStyle = '#1e293b';
+    ctx.fill();
+
+    let segX = barX;
+    const categoriesEntries = Object.entries(statsData.categoryMeta).filter(([_, m]) => m.count > 0);
+    categoriesEntries.forEach(([key, meta], i) => {
+      const segW = Math.max(2, (meta.count / statsData.totalCount) * barW);
+      ctx.fillStyle = meta.color;
+      ctx.beginPath();
+      if (i === 0 && categoriesEntries.length === 1) {
+        drawCanvasRoundRect(ctx, segX, barY, segW, barH, 9);
+      } else {
+        ctx.rect(segX, barY, segW, barH);
+      }
+      ctx.fill();
+      segX += segW;
+    });
+
+    // Légende sous la jauge
+    const legendY = curY + 110;
+    const legCount = categoriesEntries.length;
+    const legItemW = barW / Math.max(legCount, 1);
+    categoriesEntries.forEach(([key, meta], i) => {
+      const lx = barX + i * legItemW;
+      const pct = statsData.totalCount > 0 ? ((meta.count / statsData.totalCount) * 100).toFixed(0) : 0;
+
+      // Pastille de couleur
+      ctx.beginPath();
+      ctx.arc(lx + 8, legendY - 4, 5, 0, Math.PI * 2);
+      ctx.fillStyle = meta.color;
+      ctx.fill();
+
+      // Texte
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = "bold 13px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(meta.label, lx + 20, legendY);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = "12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(`${meta.count} écrits (${pct}%)`, lx + 20, legendY + 18);
+    });
+
+    curY += chartCardH + 24;
+
+    // 5. Deux colonnes : Densité par genre (gauche) & Top 3 (droite)
+    const colW = (width - paddingX * 2 - 20) / 2;
+    const colH = 340;
+
+    // Colonne gauche : Densité
+    drawCanvasRoundRect(ctx, paddingX, curY, colW, colH, 14);
+    ctx.fillStyle = 'rgba(18, 24, 38, 0.75)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#f1f5f9';
+    ctx.font = "bold 16px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("Densité par catégorie (Mots & Pages)", paddingX + 20, curY + 34);
+
+    const maxWords = Math.max(...Object.values(statsData.categoryMeta).map(m => m.words), 1);
+    const catKeys = Object.entries(statsData.categoryMeta);
+    let densityY = curY + 68;
+    catKeys.forEach(([key, meta]) => {
+      const wordsFmt = meta.words.toLocaleString('fr-FR');
+      const hours = Math.floor(meta.minutes / 60);
+      const mins = Math.round(meta.minutes % 60);
+      const timeStr = hours > 0 ? `${hours}h ${mins.toString().padStart(2, '0')}` : `${mins} min`;
+
+      // Label & pastille
+      ctx.beginPath();
+      ctx.arc(paddingX + 26, densityY + 4, 4, 0, Math.PI * 2);
+      ctx.fillStyle = meta.color;
+      ctx.fill();
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = "600 14px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(meta.label, paddingX + 38, densityY + 8);
+
+      // Valeur à droite
+      const valStr = `${wordsFmt} mots • ${timeStr} • ${meta.pages} p.`;
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = "12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      const valW = ctx.measureText(valStr).width;
+      ctx.fillText(valStr, paddingX + colW - valW - 20, densityY + 8);
+
+      // Barre de progression
+      const trackX = paddingX + 20;
+      const trackY = densityY + 18;
+      const trackW = colW - 40;
+      const trackH = 7;
+      drawCanvasRoundRect(ctx, trackX, trackY, trackW, trackH, 4);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+
+      const fillW = Math.max(4, Math.round((meta.words / maxWords) * trackW));
+      drawCanvasRoundRect(ctx, trackX, trackY, fillW, trackH, 4);
+      ctx.fillStyle = meta.color;
+      ctx.fill();
+
+      densityY += 66;
+    });
+
+    // Colonne droite : Top 3 des textes
+    const rightColX = paddingX + colW + 20;
+    drawCanvasRoundRect(ctx, rightColX, curY, colW, colH, 14);
+    ctx.fillStyle = 'rgba(18, 24, 38, 0.75)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#f1f5f9';
+    ctx.font = "bold 16px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("Textes les plus volumineux", rightColX + 20, curY + 34);
+
+    let topY = curY + 76;
+    statsData.top3.forEach((item, idx) => {
+      const catMeta = statsData.categoryMeta[item.category] || { label: item.category, color: '#38bdf8' };
+      const wordsFmt = item.words.toLocaleString('fr-FR');
+      const timeStr = item.minutes >= 60 
+        ? `${Math.floor(item.minutes / 60)}h ${Math.round(item.minutes % 60).toString().padStart(2, '0')}`
+        : `${Math.round(item.minutes)} min`;
+
+      // Cercle de rang #1, #2, #3
+      drawCanvasRoundRect(ctx, rightColX + 20, topY - 14, 28, 28, 14);
+      ctx.fillStyle = idx === 0 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.08)';
+      ctx.fill();
+      ctx.fillStyle = idx === 0 ? '#fbbf24' : '#94a3b8';
+      ctx.font = "bold 13px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(String(idx + 1), rightColX + 30, topY + 4);
+
+      // Titre
+      let titleStr = item.title;
+      if (titleStr.length > 38) titleStr = titleStr.slice(0, 36) + '...';
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = "bold 14px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(titleStr, rightColX + 60, topY - 2);
+
+      // Métadonnées
+      ctx.fillStyle = catMeta.color;
+      ctx.font = "600 12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(catMeta.label, rightColX + 60, topY + 18);
+
+      const catW = ctx.measureText(catMeta.label).width;
+      ctx.fillStyle = '#64748b';
+      ctx.font = "12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(` • ${wordsFmt} mots • ${timeStr} • ${item.pages} p.`, rightColX + 60 + catW, topY + 18);
+
+      topY += 86;
+    });
+
+    curY += colH + 20;
+
+    // 6. Bas de page / Footer
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.moveTo(paddingX, curY);
+    ctx.lineTo(width - paddingX, curY);
+    ctx.stroke();
+
+    curY += 20;
+    ctx.fillStyle = '#64748b';
+    ctx.font = "12px 'Calibri', 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("L'antre du caddrillage • Recueil d'écrits, fictions et pensées littéraires", paddingX, curY);
+
+    const brandUrl = "Application & Site autonome";
+    const brandW = ctx.measureText(brandUrl).width;
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(brandUrl, width - paddingX - brandW, curY);
+
+    // 7. Déclenchement du téléchargement PNG
+    canvas.toBlob((blob) => {
+      if (!blob) throw new Error("Génération du Blob PNG échouée");
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = now.toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `Statistiques_L_antre_du_caddrillage_${dateStr}.png`;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 3000);
+
+      showToast("Statistiques exportées en image PNG avec succès !", "🖼️");
+    }, 'image/png');
+
+  } catch (err) {
+    console.error("Erreur lors de l'export d'image des stats :", err);
+    showToast("Une erreur est survenue lors de l'export de l'image.", "⚠️");
+  } finally {
+    if (exportBtn) exportBtn.disabled = false;
+    if (exportBtnText) exportBtnText.textContent = "Exporter les statistiques (Image .png)";
+  }
 }
 
 // =========================================================
@@ -5152,7 +5578,7 @@ function openDownloadAppModal() {
     }
     if (mainBtnText) mainBtnText.textContent = 'Télécharger pour Linux (.AppImage)';
     if (subtextEl) subtextEl.textContent = 'Format universel Linux sans installation';
-  } else if (currentOS === 'android') {
+  } else  if (currentOS === 'android') {
     const pMeta = meta.platforms.android;
     if (labelEl) labelEl.textContent = 'Plateforme détectée : Android';
     if (titleEl) titleEl.textContent = pMeta.heroTitle;
@@ -5164,6 +5590,28 @@ function openDownloadAppModal() {
     }
     if (mainBtnText) mainBtnText.textContent = 'Télécharger pour Android (.apk)';
     if (subtextEl) subtextEl.textContent = 'Package APK installable directement sur votre téléphone';
+  }
+
+  // Configuration de la carte de mise à jour dédiée
+  const inApp = isRunningInApp();
+  const updateBadge = document.getElementById('appUpdateBadge');
+  const updateDesc = document.getElementById('appUpdateDesc');
+  const updateBtnText = document.getElementById('btnUpdateAppActionText');
+
+  if (updateBadge) {
+    if (inApp) {
+      updateBadge.textContent = 'Mode Application Hors-ligne • v1.0.0';
+      if (updateDesc) {
+        updateDesc.textContent = "Vous utilisez l'application locale. Cliquez pour télécharger et mettre à jour votre version avec tous les derniers écrits et thèmes.";
+      }
+      if (updateBtnText) updateBtnText.textContent = "Mettre à jour l'application";
+    } else {
+      updateBadge.textContent = 'Dernière version publiée : v1.0.0';
+      if (updateDesc) {
+        updateDesc.textContent = "Téléchargez ou mettez à jour l'application autonome pour lire tous les écrits 100% hors-ligne sur votre ordinateur ou smartphone.";
+      }
+      if (updateBtnText) updateBtnText.textContent = "Télécharger / Mettre à jour l'application";
+    }
   }
 
   modal.classList.add('active');
@@ -5178,17 +5626,87 @@ function closeDownloadAppModal() {
   }
 }
 
+function isRunningInApp() {
+  return window.location.protocol === 'file:' || 
+         navigator.userAgent.includes('Electron') || 
+         window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.protocol === 'vscode-webview:' ||
+         window.location.protocol === 'capacitor:';
+}
+
+async function handleUpdateAppClick() {
+  const btn = document.getElementById('btnUpdateAppAction');
+  const btnText = document.getElementById('btnUpdateAppActionText');
+  const statusDesc = document.getElementById('appUpdateDesc');
+  const hintEl = document.getElementById('appUpdateHint');
+
+  const currentOS = detectUserPlatform();
+
+  const releaseDownloadUrls = {
+    macos: "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.dmg",
+    windows: "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.exe",
+    linux: "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.AppImage",
+    android: "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/latest/download/L-antre-du-caddrillage.apk"
+  };
+
+  const fileNames = {
+    macos: "L-antre-du-caddrillage.dmg",
+    windows: "L-antre-du-caddrillage.exe",
+    linux: "L-antre-du-caddrillage.AppImage",
+    android: "L-antre-du-caddrillage.apk"
+  };
+
+  const url = releaseDownloadUrls[currentOS] || releaseDownloadUrls.macos;
+  const fileName = fileNames[currentOS] || fileNames.macos;
+
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = "Téléchargement en cours...";
+  if (statusDesc) statusDesc.textContent = `Téléchargement de la dernière version (${fileName}) pour ${currentOS.toUpperCase()}...`;
+
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 1200);
+
+    showToast("Téléchargement de la mise à jour lancé !", "🚀");
+    if (hintEl) {
+      hintEl.textContent = `Fichier téléchargé : ${fileName}. Ouvrez-le pour appliquer la nouvelle version sur votre appareil.`;
+      hintEl.style.color = "var(--accent)";
+    }
+    if (statusDesc) {
+      statusDesc.textContent = `La dernière version a été téléchargée (${fileName}). Ouvrez le fichier pour installer la mise à jour sur votre appareil.`;
+    }
+  } catch (err) {
+    console.error("Erreur mise à jour :", err);
+    showToast("Impossible de lancer le téléchargement automatique.", "⚠️");
+  } finally {
+    setTimeout(() => {
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = "Mettre à jour l'application";
+    }, 3000);
+  }
+}
+
 function initDownloadAppModal() {
   applyBuildsMetadata();
 
   const btnOpen = document.getElementById('btnOpenDownloadModal');
   const btnClose = document.getElementById('btnCloseDownloadAppModal');
   const btnDismiss = document.getElementById('btnDismissDownloadAppModal');
+  const btnUpdateApp = document.getElementById('btnUpdateAppAction');
   const modal = document.getElementById('downloadAppModal');
 
   if (btnOpen) btnOpen.addEventListener('click', openDownloadAppModal);
   if (btnClose) btnClose.addEventListener('click', closeDownloadAppModal);
   if (btnDismiss) btnDismiss.addEventListener('click', closeDownloadAppModal);
+  if (btnUpdateApp) btnUpdateApp.addEventListener('click', handleUpdateAppClick);
 
   if (modal) {
     modal.addEventListener('click', (e) => {

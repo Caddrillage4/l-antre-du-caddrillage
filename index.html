@@ -1269,6 +1269,41 @@
         <!-- Bannière d'annonce / Note générale personnalisable -->
         <div class="download-modal-banner" id="downloadModalBanner" style="display: none;"></div>
 
+        <!-- Carte Dédiée : Mettre à jour l'application -->
+        <div class="app-update-card" id="appUpdateCard">
+          <div class="app-update-header">
+            <div class="app-update-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </div>
+            <div class="app-update-info">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <h4 class="app-update-title" style="margin: 0; font-size: 1.1rem;">Mise à jour de l'application</h4>
+                <span class="poetry-status-badge" id="appUpdateBadge" style="font-size: 0.78rem; background: rgba(56, 189, 248, 0.15); color: var(--accent); border-color: rgba(56, 189, 248, 0.35);">Version actuelle : v1.0.0</span>
+              </div>
+              <p class="app-update-desc" id="appUpdateDesc" style="margin: 6px 0 0; font-size: 0.9rem; color: var(--text-muted);">
+                Téléchargez la toute dernière version de l'application (avec tous les derniers textes, thèmes et correctifs) pour votre système.
+              </p>
+            </div>
+          </div>
+          <div class="app-update-actions-row" style="margin-top: 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" id="btnUpdateAppAction" style="display: inline-flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span id="btnUpdateAppActionText">Mettre à jour l'application</span>
+            </button>
+            <span class="app-update-hint" id="appUpdateHint" style="font-size: 0.84rem; color: var(--text-muted);">
+              Détecte votre système et récupère la dernière version depuis GitHub Releases.
+            </span>
+          </div>
+        </div>
+
         <!-- Carte Recommandée selon l'OS détecté -->
         <div class="download-detected-card" id="downloadDetectedCard">
           <div class="detected-badge">

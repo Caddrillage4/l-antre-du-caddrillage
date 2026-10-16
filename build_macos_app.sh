@@ -109,7 +109,8 @@ chmod +x "$APP_DIR/Contents/MacOS/$APP_NAME"
 
 # 7. Nettoyage des métadonnées étendues & Signature ad-hoc (Gatekeeper)
 echo "7. Signature du bundle d'application..."
-xattr -cr "$APP_DIR"
+dot_clean -m "$APP_DIR" 2>/dev/null || true
+xattr -cr "$APP_DIR" 2>/dev/null || true
 codesign --force --deep -s - "$APP_DIR"
 
 echo "✓ Application créée avec succès : $APP_DIR"
