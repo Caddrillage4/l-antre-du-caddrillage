@@ -403,17 +403,37 @@
           </details>
         </div>
 
-        <!-- SECTION : RETOURS & COMMENTAIRES PRIVÉS DES LECTEURS -->
-        <div class="admin-section" id="adminCommentsSection">
-          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;">
-            <h3 class="section-heading">Commentaires & Retours des lecteurs</h3>
-            <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;" id="commentsCountBadge">0 commentaire</span>
-          </div>
-          <p class="section-desc">Messages privés envoyés par vos lecteurs depuis la vitrine. Seul vous pouvez les lire ici dans votre espace personnel.</p>
+        <!-- SECTION : RETOURS & COMMENTAIRES PRIVÉS DES LECTEURS (ACCORDÉON REPLIABLE) -->
+        <div class="admin-section admin-identity-section" id="adminCommentsSection" style="padding: 0; overflow: hidden;">
+          <details class="admin-accordion" id="adminCommentsAccordion" open>
+            <summary class="admin-accordion-summary">
+              <div class="accordion-title-group">
+                <div class="accordion-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                <div class="accordion-headings">
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <h3 class="section-heading accordion-heading-text">Commentaires & Retours des lecteurs</h3>
+                    <span class="poetry-status-badge" id="commentsCountBadge" style="font-size: 0.8rem; background: rgba(56, 189, 248, 0.12); color: var(--accent); border-color: rgba(56, 189, 248, 0.3);">0 commentaire</span>
+                  </div>
+                  <p class="section-desc accordion-desc-text">Messages privés envoyés par vos lecteurs depuis la vitrine (repliez pour naviguer plus vite)</p>
+                </div>
+              </div>
+              <span class="accordion-chevron" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </summary>
 
-          <div class="admin-comments-list" id="adminCommentsList">
-            <!-- Liste des commentaires générée en JS -->
-          </div>
+            <div class="admin-accordion-content">
+              <div class="admin-comments-list" id="adminCommentsList">
+                <!-- Liste des commentaires générée en JS -->
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- SECTION : PERSONNALISATION DU SITE & AVANT-PROPOS (MENU DÉROULANT / ACCORDÉON) -->

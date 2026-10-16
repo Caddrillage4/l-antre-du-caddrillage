@@ -3667,6 +3667,18 @@ function initSearchAdmin() {
     });
   }
 
+  // Mémorisation de l'état replié/déplié de l'accordéon des commentaires
+  const commentsAccordion = document.getElementById('adminCommentsAccordion');
+  if (commentsAccordion) {
+    const savedCommentsState = localStorage.getItem('caddrillage_admin_comments_open');
+    if (savedCommentsState !== null) {
+      commentsAccordion.open = savedCommentsState === 'true';
+    }
+    commentsAccordion.addEventListener('toggle', () => {
+      localStorage.setItem('caddrillage_admin_comments_open', commentsAccordion.open ? 'true' : 'false');
+    });
+  }
+
   if (input) {
     input.addEventListener('input', () => {
       adminSearchQuery = input.value.trim();
