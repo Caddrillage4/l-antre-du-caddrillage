@@ -56,6 +56,11 @@ let writingToDeleteId = null;
 let commentToDeleteId = null;
 let activePdfBlobUrl = null;
 
+// Prévention immédiate du clignotement du bouton d'application si masqué
+if (localStorage.getItem('caddrillage_show_app_download_btn') === 'false') {
+  document.body.classList.add('hide-app-download-btn');
+}
+
 // État de la recherche vitrine & espace personnel
 let isSearchPanelOpen = false;
 let showcaseSearchQuery = '';
@@ -4587,6 +4592,11 @@ function applySiteIdentity() {
   if (inputTitle && document.activeElement !== inputTitle) inputTitle.value = title;
   if (inputTagline && document.activeElement !== inputTagline) inputTagline.value = tagline;
   if (textareaAbout && document.activeElement !== textareaAbout) textareaAbout.value = getAboutText();
+
+  // Mise à jour de la visibilité du bouton d'application
+  if (typeof setAppDownloadBtnVisibility === 'function') {
+    setAppDownloadBtnVisibility(isAppDownloadBtnVisible(), false);
+  }
 }
 
 function renderAboutText(text) {
@@ -4630,6 +4640,108 @@ function closeAboutModal() {
   if (modal) {
     modal.classList.remove('active');
     document.body.style.overflow = '';
+  }
+}
+
+// =========================================================
+// CONTRÔLE DE VISIBILITÉ DU BOUTON « APPLICATION (HORS-LIGNE) »
+// =========================================================
+const APP_DOWNLOAD_BTN_STORAGE_KEY = 'caddrillage_show_app_download_btn';
+
+function isAppDownloadBtnVisible() {
+  const saved = localStorage.getItem(APP_DOWNLOAD_BTN_STORAGE_KEY);
+  // Visible par défaut sauf si expressément désactivé par l'auteur
+  return saved !== 'false';
+}
+
+function setAppDownloadBtnVisibility(visible, showFeedbackToast = false) {
+  const btnHeader = document.getElementById('btnOpenDownloadModal');
+  const checkbox = document.getElementById('toggleAppDownloadCheckbox');
+  const btnToggle = document.getElementById('btnToggleAppDownloadVisibility');
+  const statusBadge = document.getElementById('appHeaderStatusBadge');
+  const statusDesc = document.getElementById('appHeaderStatusDesc');
+  const btnLabel = document.getElementById('appHeaderToggleBtnLabel');
+  const switchText = document.getElementById('appHeaderSwitchText');
+  const card = document.getElementById('appHeaderToggleCard');
+  const iconContainer = document.getElementById('appHeaderToggleIcon');
+
+  localStorage.setItem(APP_DOWNLOAD_BTN_STORAGE_KEY, visible ? 'true' : 'false');
+
+  document.body.classList.toggle('hide-app-download-btn', !visible);
+  if (btnHeader) {
+    btnHeader.style.display = visible ? '' : 'none';
+    btnHeader.classList.toggle('is-app-btn-hidden', !visible);
+  }
+
+  if (checkbox) {
+    checkbox.checked = visible;
+  }
+
+  if (switchText) {
+    switchText.textContent = visible ? 'Visible' : 'Masqué';
+  }
+
+  if (statusBadge) {
+    statusBadge.textContent = visible ? 'Affiché' : 'Masqué';
+    statusBadge.className = `app-header-status-badge ${visible ? 'is-visible' : 'is-hidden'}`;
+  }
+
+  if (statusDesc) {
+    statusDesc.textContent = visible
+      ? "Le bouton est actuellement visible en haut de la vitrine pour permettre à vos lecteurs de télécharger l'application hors-ligne."
+      : "Le bouton est masqué de l'en-tête. La vitrine n'affiche plus l'accès direct au téléchargement.";
+  }
+
+  if (btnLabel) {
+    btnLabel.textContent = visible ? 'Masquer le bouton' : 'Afficher le bouton';
+  }
+
+  if (btnToggle) {
+    btnToggle.setAttribute('aria-pressed', visible ? 'true' : 'false');
+    btnToggle.title = visible
+      ? "Masquer le bouton Application Hors-ligne dans l'en-tête"
+      : "Afficher le bouton Application Hors-ligne dans l'en-tête";
+  }
+
+  if (card) {
+    card.classList.toggle('is-visible-mode', visible);
+    card.classList.toggle('is-hidden-mode', !visible);
+  }
+
+  if (iconContainer) {
+    iconContainer.innerHTML = visible
+      ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`
+      : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+  }
+
+  if (showFeedbackToast) {
+    if (visible) {
+      showToast("Bouton « Application (Hors-ligne) » affiché dans l'en-tête.", "✨");
+    } else {
+      showToast("Bouton « Application (Hors-ligne) » masqué de l'en-tête.", "👁️");
+    }
+  }
+}
+
+function initAppDownloadVisibilityControl() {
+  const checkbox = document.getElementById('toggleAppDownloadCheckbox');
+  const btnToggle = document.getElementById('btnToggleAppDownloadVisibility');
+
+  // Application de l'état initial
+  setAppDownloadBtnVisibility(isAppDownloadBtnVisible(), false);
+
+  if (btnToggle) {
+    btnToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const current = isAppDownloadBtnVisible();
+      setAppDownloadBtnVisibility(!current, true);
+    });
+  }
+
+  if (checkbox) {
+    checkbox.addEventListener('change', () => {
+      setAppDownloadBtnVisibility(checkbox.checked, true);
+    });
   }
 }
 
@@ -4682,6 +4794,8 @@ function initAboutSection() {
         localStorage.setItem('caddrillage_about_text', newAbout || DEFAULT_ABOUT_TEXT);
       }
 
+      localStorage.setItem(APP_DOWNLOAD_BTN_STORAGE_KEY, isAppDownloadBtnVisible() ? 'true' : 'false');
+
       applySiteIdentity();
       renderAboutText(newAbout || DEFAULT_ABOUT_TEXT);
       saveCustomThemesFromAdmin(false);
@@ -4691,10 +4805,11 @@ function initAboutSection() {
 
   if (btnReset) {
     btnReset.addEventListener('click', () => {
-      if (confirm('Voulez-vous rétablir le titre, le slogan et la note À propos d\'origine ?')) {
+      if (confirm('Voulez-vous rétablir le titre, le slogan, la visibilité du bouton d\'application et la note À propos d\'origine ?')) {
         localStorage.removeItem('caddrillage_site_title');
         localStorage.removeItem('caddrillage_site_tagline');
         localStorage.removeItem('caddrillage_about_text');
+        localStorage.removeItem(APP_DOWNLOAD_BTN_STORAGE_KEY);
 
         if (inputTitle) inputTitle.value = DEFAULT_SITE_TITLE;
         if (inputTagline) inputTagline.value = DEFAULT_SITE_TAGLINE;
@@ -4702,6 +4817,7 @@ function initAboutSection() {
 
         applySiteIdentity();
         renderAboutText(DEFAULT_ABOUT_TEXT);
+        setAppDownloadBtnVisibility(true, false);
         showToast('Valeurs d\'origine rétablies.', '📖');
       }
     });
@@ -4714,6 +4830,9 @@ function initAboutSection() {
   // Initialisation et rendu de l'éditeur des builds d'installation
   initAdminBuildsHandlers();
   renderAdminBuildsEditor();
+
+  // Initialisation du contrôle de visibilité du bouton d'application
+  initAppDownloadVisibilityControl();
 
   // Premier rendu du contenu dans la modale
   renderAboutText(getAboutText());
@@ -5696,6 +5815,11 @@ async function handleUpdateAppClick() {
 
 function initDownloadAppModal() {
   applyBuildsMetadata();
+
+  // Initialisation de la visibilité paramétrée du bouton d'application
+  if (typeof setAppDownloadBtnVisibility === 'function') {
+    setAppDownloadBtnVisibility(isAppDownloadBtnVisible(), false);
+  }
 
   const btnOpen = document.getElementById('btnOpenDownloadModal');
   const btnClose = document.getElementById('btnCloseDownloadAppModal');

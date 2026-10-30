@@ -551,6 +551,51 @@
                   </div>
                 </div>
 
+                <!-- 6. Visibilité du bouton « Application (Hors-ligne) » dans l'en-tête -->
+                <div class="form-group app-header-toggle-section">
+                  <label class="form-label">Affichage du bouton « Application (Hors-ligne) »</label>
+                  <div class="form-hint" style="margin-bottom: 14px;">
+                    Contrôlez l'affichage du bouton d'accès au téléchargement de l'application hors-ligne situé tout en haut à droite de la vitrine.
+                  </div>
+
+                  <div class="app-header-toggle-card" id="appHeaderToggleCard">
+                    <div class="app-header-toggle-info">
+                      <div class="app-header-toggle-header">
+                        <div class="app-header-toggle-title">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                          </svg>
+                          <span>Bouton dans l'en-tête de la vitrine</span>
+                        </div>
+                        <span class="app-header-status-badge is-visible" id="appHeaderStatusBadge">Affiché</span>
+                      </div>
+                      <p class="app-header-toggle-desc" id="appHeaderStatusDesc">
+                        Le bouton est actuellement visible en haut de la vitrine pour permettre à vos lecteurs de télécharger l'application hors-ligne.
+                      </p>
+                    </div>
+
+                    <div class="app-header-toggle-actions">
+                      <button type="button" class="btn-secondary btn-toggle-app-display" id="btnToggleAppDownloadVisibility" title="Afficher ou masquer le bouton Application Hors-ligne">
+                        <svg class="toggle-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="appHeaderToggleIcon">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                        <span id="appHeaderToggleBtnLabel">Masquer le bouton</span>
+                      </button>
+
+                      <label class="reading-time-toggle app-header-switch-toggle" id="appHeaderSwitchLabel" title="Basculer l'affichage du bouton">
+                        <input type="checkbox" id="toggleAppDownloadCheckbox" class="reading-toggle-input" checked aria-label="Afficher ou masquer le bouton de l'application">
+                        <span class="reading-toggle-switch">
+                          <span class="reading-toggle-handle"></span>
+                        </span>
+                        <span class="reading-toggle-text" id="appHeaderSwitchText">Visible</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="admin-identity-actions">
                   <button type="submit" class="btn-primary" id="btnSaveIdentity">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
