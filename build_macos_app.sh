@@ -95,6 +95,10 @@ if [ -f "seed_writings.json" ]; then
     echo "  -> Intégration de la base de données seed_writings.json..."
     cp seed_writings.json "$APP_DIR/Contents/Resources/"
 fi
+if [ -f "site_settings.json" ]; then
+    echo "  -> Intégration de la configuration site_settings.json..."
+    cp site_settings.json "$APP_DIR/Contents/Resources/"
+fi
 
 # 6. Compilation du wrapper natif Cocoa + WebKit (Objective-C)
 echo "6. Compilation du binaire natif macOS avec clang..."

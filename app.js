@@ -509,7 +509,14 @@ async function processOfflineQueue() {
 
   for (const item of queue) {
     try {
-      if (item.action === 'delete') {
+      if (item.action === 'site_settings') {
+        const success = await syncSiteSettingsToCloud(false, true);
+        if (!success) {
+          remaining.push(item);
+        } else {
+          syncedCount++;
+        }
+      } else if (item.action === 'delete') {
         const { error } = await client
           .from(SUPABASE_CONFIG.table)
           .delete()
@@ -1127,6 +1134,7 @@ function saveCustomThemesFromAdmin(showFeedback = true) {
   if (showFeedback) {
     showToast('Thèmes & ambiances mis à jour avec succès !', '🎨');
   }
+  syncSiteSettingsToCloud(false);
   return true;
 }
 
@@ -1135,6 +1143,7 @@ function resetCustomThemesToDefault() {
     localStorage.removeItem('caddrillage_custom_themes');
     applyThemesMetadata();
     renderAdminThemesEditor();
+    syncSiteSettingsToCloud(false);
     showToast('Noms et descriptions des thèmes d\'origine rétablis.', '🎨');
   }
 }
@@ -1391,6 +1400,7 @@ function saveCustomBuildsFromAdmin(showFeedback = true) {
   if (showFeedback) {
     showToast('Textes de la page d\'installation enregistrés avec succès !', 'success');
   }
+  syncSiteSettingsToCloud(false);
   return true;
 }
 
@@ -1399,6 +1409,7 @@ function resetCustomBuildsToDefault() {
     localStorage.removeItem('caddrillage_custom_builds');
     applyBuildsMetadata();
     renderAdminBuildsEditor();
+    syncSiteSettingsToCloud(false);
     showToast('Textes d\'origine de la page d\'installation rétablis.', 'info');
   }
 }
@@ -5996,6 +6007,208 @@ function setAppDownloadBtnVisibility(visible, showFeedbackToast = false) {
   }
 }
 
+// =========================================================
+// SYNCHRONISATION GLOBALE DE LA CONFIGURATION DU SITE (SUPABASE & HORS-LIGNE)
+// =========================================================
+
+function getAllCurrentSiteSettings() {
+  let customThemes = null;
+  try {
+    const rawThemes = localStorage.getItem('caddrillage_custom_themes');
+    if (rawThemes) customThemes = JSON.parse(rawThemes);
+  } catch (e) {}
+
+  let customBuilds = null;
+  try {
+    const rawBuilds = localStorage.getItem('caddrillage_custom_builds');
+    if (rawBuilds) customBuilds = JSON.parse(rawBuilds);
+  } catch (e) {}
+
+  const updatedAt = Number(localStorage.getItem('caddrillage_settings_updated_at')) || Date.now();
+
+  return {
+    siteTitle: getSiteTitle(),
+    siteTagline: getSiteTagline(),
+    aboutText: getAboutText(),
+    showAppDownloadBtn: isAppDownloadBtnVisible(),
+    customThemes: customThemes,
+    customBuilds: customBuilds,
+    updatedAt: updatedAt
+  };
+}
+
+function applyAllSiteSettings(settings, saveToLocal = true) {
+  if (!settings || typeof settings !== 'object') return;
+
+  if (saveToLocal) {
+    if (settings.siteTitle !== undefined && settings.siteTitle !== null) {
+      localStorage.setItem('caddrillage_site_title', String(settings.siteTitle).trim());
+    }
+    if (settings.siteTagline !== undefined && settings.siteTagline !== null) {
+      localStorage.setItem('caddrillage_site_tagline', String(settings.siteTagline).trim());
+    }
+    if (settings.aboutText !== undefined && settings.aboutText !== null) {
+      localStorage.setItem('caddrillage_about_text', String(settings.aboutText));
+    }
+    if (settings.showAppDownloadBtn !== undefined && settings.showAppDownloadBtn !== null) {
+      localStorage.setItem(APP_DOWNLOAD_BTN_STORAGE_KEY, settings.showAppDownloadBtn ? 'true' : 'false');
+    }
+    if (settings.customThemes !== undefined) {
+      if (settings.customThemes && typeof settings.customThemes === 'object') {
+        localStorage.setItem('caddrillage_custom_themes', JSON.stringify(settings.customThemes));
+      } else {
+        localStorage.removeItem('caddrillage_custom_themes');
+      }
+    }
+    if (settings.customBuilds !== undefined) {
+      if (settings.customBuilds && typeof settings.customBuilds === 'object') {
+        localStorage.setItem('caddrillage_custom_builds', JSON.stringify(settings.customBuilds));
+      } else {
+        localStorage.removeItem('caddrillage_custom_builds');
+      }
+    }
+    if (settings.updatedAt) {
+      localStorage.setItem('caddrillage_settings_updated_at', String(settings.updatedAt));
+    }
+  }
+
+  // Réapplication de l'identité visuelle
+  applySiteIdentity();
+
+  // Rendu de l'avant-propos
+  renderAboutText(getAboutText());
+
+  // Mise à jour de l'affichage du bouton de téléchargement de l'app
+  setAppDownloadBtnVisibility(isAppDownloadBtnVisible(), false);
+
+  // Mise à jour dynamique des thèmes
+  applyThemesMetadata();
+  if (typeof renderAdminThemesEditor === 'function') {
+    renderAdminThemesEditor();
+  }
+
+  // Mise à jour dynamique des textes des applications / builds
+  if (typeof applyBuildsMetadata === 'function') {
+    applyBuildsMetadata();
+  }
+  if (typeof renderAdminBuildsEditor === 'function') {
+    renderAdminBuildsEditor();
+  }
+}
+
+async function syncSiteSettingsToCloud(showToastFeedback = false, isFromQueue = false) {
+  const now = Date.now();
+  localStorage.setItem('caddrillage_settings_updated_at', String(now));
+  const settings = getAllCurrentSiteSettings();
+  settings.updatedAt = now;
+
+  if (!navigator.onLine) {
+    if (!isFromQueue) {
+      const queue = getOfflineQueue();
+      const filtered = queue.filter(item => item.action !== 'site_settings');
+      filtered.push({ action: 'site_settings', timestamp: now });
+      saveOfflineQueue(filtered);
+    }
+    if (showToastFeedback) {
+      showToast('Mode hors-ligne : modifications sauvegardées localement (en attente de synchronisation).', 'info');
+    }
+    return false;
+  }
+
+  try {
+    const jsonBody = JSON.stringify(settings, null, 2);
+
+    // Tentative 1 : via requête directe vers le bucket Supabase Storage avec x-upsert
+    const uploadUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/${SUPABASE_CONFIG.bucket}/site_settings.json`;
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_CONFIG.anonKey,
+        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        'x-upsert': 'true',
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: jsonBody
+    });
+
+    if (!response.ok) {
+      // Tentative de secours avec supabase-js si disponible
+      const client = getSupabaseClient();
+      if (client && client.storage) {
+        const blob = new Blob([jsonBody], { type: 'application/json' });
+        const { error } = await client.storage.from(SUPABASE_CONFIG.bucket).upload('site_settings.json', blob, {
+          contentType: 'application/json; charset=utf-8',
+          upsert: true
+        });
+        if (error) throw error;
+      } else {
+        throw new Error(`Upload settings HTTP code ${response.status}`);
+      }
+    }
+
+    if (showToastFeedback) {
+      showToast('Personnalisation synchronisée avec succès pour tous les visiteurs !', '✨');
+    }
+    return true;
+  } catch (err) {
+    console.warn('Erreur synchronisation site_settings vers Supabase:', err);
+    if (!isFromQueue) {
+      const queue = getOfflineQueue();
+      const filtered = queue.filter(item => item.action !== 'site_settings');
+      filtered.push({ action: 'site_settings', timestamp: now });
+      saveOfflineQueue(filtered);
+    }
+    if (showToastFeedback) {
+      showToast('Sauvegardé localement. La synchronisation sur le cloud s\'exécutera dès reconnexion.', 'info');
+    }
+    return false;
+  }
+}
+
+async function fetchSiteSettingsFromSupabase() {
+  try {
+    let settings = null;
+
+    if (navigator.onLine) {
+      try {
+        const cloudUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${SUPABASE_CONFIG.bucket}/site_settings.json?t=${Date.now()}`;
+        const res = await fetch(cloudUrl);
+        if (res.ok) {
+          settings = await res.json();
+        }
+      } catch (cloudErr) {
+        console.warn('Échec récupération site_settings depuis Supabase Storage:', cloudErr);
+      }
+    }
+
+    // Si non disponible sur le cloud ou hors-ligne, tentative sur le fichier local embarqué
+    if (!settings) {
+      try {
+        const localRes = await fetch(`site_settings.json?t=${Date.now()}`);
+        if (localRes.ok) {
+          settings = await localRes.json();
+        }
+      } catch (localErr) {
+        // En mode natif/hors-ligne ou sans serveur HTTP
+      }
+    }
+
+    if (!settings) return null;
+
+    const localUpdatedAt = Number(localStorage.getItem('caddrillage_settings_updated_at')) || 0;
+    const remoteUpdatedAt = Number(settings.updatedAt) || 0;
+
+    // Si les réglages distants sont plus récents ou que le stockage local n'est pas encore initialisé
+    if (remoteUpdatedAt > localUpdatedAt || localUpdatedAt === 0) {
+      applyAllSiteSettings(settings, true);
+      return settings;
+    }
+  } catch (err) {
+    console.warn('fetchSiteSettingsFromSupabase :', err);
+  }
+  return null;
+}
+
 function initAppDownloadVisibilityControl() {
   const checkbox = document.getElementById('toggleAppDownloadCheckbox');
   const btnToggle = document.getElementById('btnToggleAppDownloadVisibility');
@@ -6008,12 +6221,14 @@ function initAppDownloadVisibilityControl() {
       e.preventDefault();
       const current = isAppDownloadBtnVisible();
       setAppDownloadBtnVisibility(!current, true);
+      syncSiteSettingsToCloud(false);
     });
   }
 
   if (checkbox) {
     checkbox.addEventListener('change', () => {
       setAppDownloadBtnVisibility(checkbox.checked, true);
+      syncSiteSettingsToCloud(false);
     });
   }
 }
@@ -6072,7 +6287,8 @@ function initAboutSection() {
       applySiteIdentity();
       renderAboutText(newAbout || DEFAULT_ABOUT_TEXT);
       saveCustomThemesFromAdmin(false);
-      showToast('Personnalisation du site et avant-propos enregistrés !', '✨');
+      saveCustomBuildsFromAdmin(false);
+      syncSiteSettingsToCloud(true);
     });
   }
 
@@ -6091,6 +6307,7 @@ function initAboutSection() {
         applySiteIdentity();
         renderAboutText(DEFAULT_ABOUT_TEXT);
         setAppDownloadBtnVisibility(true, false);
+        syncSiteSettingsToCloud(true);
         showToast('Valeurs d\'origine rétablies.', '📖');
       }
     });
@@ -7273,9 +7490,10 @@ async function exportWindowsRebuildPackage() {
     const writings = await dbGetAllWritings();
     appendLog(`✓ ${writings.length} écrits extraits avec poésies, résumés et métriques.`);
 
-    appendLog("[2/4] Création de la base embarquée 'seed_writings.json'...");
+    appendLog("[2/4] Création de la base embarquée 'seed_writings.json' et de la configuration...");
     const zip = new window.JSZip();
     zip.file("seed_writings.json", JSON.stringify(writings, null, 2));
+    zip.file("site_settings.json", JSON.stringify(getAllCurrentSiteSettings(), null, 2));
 
     appendLog("[3/4] Intégration du script 'build_windows_app.bat' et de la documentation...");
     const winBat = `@echo off
@@ -7404,9 +7622,10 @@ async function exportLinuxRebuildPackage() {
     const writings = await dbGetAllWritings();
     appendLog(`✓ ${writings.length} écrits extraits avec poésies, résumés et métriques.`);
 
-    appendLog("[2/4] Création de la base embarquée 'seed_writings.json'...");
+    appendLog("[2/4] Création de la base embarquée 'seed_writings.json' et de la configuration...");
     const zip = new window.JSZip();
     zip.file("seed_writings.json", JSON.stringify(writings, null, 2));
+    zip.file("site_settings.json", JSON.stringify(getAllCurrentSiteSettings(), null, 2));
 
     appendLog("[3/4] Intégration du script 'build_linux_app.sh' et de la documentation...");
     const linuxSh = `#!/bin/bash
@@ -7518,6 +7737,7 @@ async function exportMultiplatformPackage() {
     const writingsJson = JSON.stringify(writings, null, 2);
     zip.file("writings_database.json", writingsJson);
     zip.file("seed_writings.json", writingsJson);
+    zip.file("site_settings.json", JSON.stringify(getAllCurrentSiteSettings(), null, 2));
 
     const macScript = `#!/bin/bash
 set -e
@@ -7712,6 +7932,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Écoute des événements de connectivité pour la synchronisation automatique
   window.addEventListener('online', async () => {
     showToast("Connexion internet rétablie : synchronisation en cours...", "info");
+    await fetchSiteSettingsFromSupabase();
     await processOfflineQueue();
     await syncLocalToSupabase();
     await refreshShowcase();
@@ -7726,6 +7947,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 11. Initialisation de la base et chargement des écrits (asynchrone, non-bloquant)
   (async () => {
+    // Récupération asynchrone des réglages généraux depuis Supabase (non-bloquant)
+    fetchSiteSettingsFromSupabase().catch(err => console.warn('Sync site settings init:', err));
+
     try {
       await initDatabase();
     } catch (e) {

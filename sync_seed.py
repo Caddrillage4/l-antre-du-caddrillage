@@ -15,11 +15,12 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 def sync_seed():
     print("============================================================")
-    print("  Export des écrits vers seed_writings.json")
+    print("  Export des écrits & configuration vers seed_writings.json")
     print("============================================================")
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(script_dir, "seed_writings.json")
+    settings_output_path = os.path.join(script_dir, "site_settings.json")
     
     url = f"{SUPABASE_URL}/rest/v1/writings?select=*&order=created_at.desc"
     req = urllib.request.Request(url, headers={
@@ -64,6 +65,23 @@ def sync_seed():
             
         print(f"✓ Succès : {len(formatted)} écrits enregistrés dans seed_writings.json.")
         print(f"  Fichier prêt à être embarqué dans le prochain .dmg macOS !")
+
+        # 2. Synchronisation de la configuration générale du site (site_settings.json)
+        print("2. Synchronisation de la configuration générale (site_settings.json)...")
+        settings_url = f"{SUPABASE_URL}/storage/v1/object/public/pdfs/site_settings.json"
+        try:
+            req_settings = urllib.request.Request(settings_url, headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}"
+            })
+            with urllib.request.urlopen(req_settings, timeout=6) as resp_s:
+                settings_data = json.loads(resp_s.read().decode())
+            with open(settings_output_path, "w", encoding="utf-8") as f_s:
+                json.dump(settings_data, f_s, ensure_ascii=False, indent=2)
+            print("✓ Succès : site_settings.json synchronisé et mis à jour !")
+        except Exception as e_s:
+            print(f"ℹ️  Configuration distante non mise à jour ({e_s}). Le fichier existant est conservé.")
+
         return 0
         
     except Exception as e:
