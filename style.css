@@ -2803,6 +2803,19 @@ body.theme-noel .card-category-badge.badge-interactive {
   border-bottom: 1px solid var(--border);
 }
 
+.btn-exit-interactive {
+  padding: 7px 14px;
+  font-weight: 600;
+  border-color: var(--border-strong);
+  transition: all 0.2s ease;
+}
+
+.btn-exit-interactive:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
 .interactive-header-icon {
   font-size: 1.3rem;
   line-height: 1;

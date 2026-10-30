@@ -3548,6 +3548,100 @@ function downloadPdfFile(writing) {
 let currentInteractiveWriting = null;
 let activeInteractiveBlobUrl = null;
 
+/**
+ * Injecte un bouton flottant élégant "Sortir de la fiction interactive"
+ * Ce bouton est automatiquement actif si le fichier HTML est lancé directement (en local ou dans un onglet autonome).
+ * S'il est joué dans l'iframe du site, il se masque car l'en-tête de la modale propose déjà le bouton Sortir.
+ */
+function ensureExitButtonInTwineHtml(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
+  if (htmlContent.includes('id="antre-exit-fiction-bar"')) return htmlContent;
+
+  const exitSnippet = `
+<!-- Bouton Sortir de la fiction interactive (autonome / lancé directement) -->
+<div id="antre-exit-fiction-bar" class="antre-exit-fiction-bar">
+  <button type="button" id="antreBtnExitFiction" class="antre-btn-exit-fiction" title="Sortir de la fiction interactive">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    <span>Sortir de la fiction</span>
+  </button>
+</div>
+<style id="antre-exit-style">
+  .antre-exit-fiction-bar {
+    position: fixed;
+    top: 14px;
+    left: 16px;
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+  }
+  .antre-btn-exit-fiction {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(10, 10, 14, 0.90);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #f3f4f6;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-family: Calibri, 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    transition: all 0.2s ease;
+    outline: none;
+    user-select: none;
+    text-decoration: none;
+  }
+  .antre-btn-exit-fiction:hover {
+    background: rgba(24, 27, 38, 0.98);
+    border-color: rgba(56, 189, 248, 0.7);
+    color: #38bdf8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+  }
+</style>
+<script id="antre-exit-script">
+  (function() {
+    var bar = document.getElementById('antre-exit-fiction-bar');
+    var btn = document.getElementById('antreBtnExitFiction');
+    // Si la fiction est ouverte dans l'iframe du site, masquer la barre flottante car l'en-tête du site offre déjà le bouton Sortir
+    if (window.self !== window.top) {
+      if (bar) bar.style.display = 'none';
+      return;
+    }
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (confirm("Voulez-vous sortir de la fiction interactive et revenir à l'Antre du caddrillage ?")) {
+          if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) {
+            window.history.back();
+          } else if (window.opener) {
+            window.close();
+          } else {
+            window.location.href = 'https://caddrillage.fr';
+          }
+        }
+      });
+    }
+  })();
+</script>
+`;
+
+  if (htmlContent.includes('</body>')) {
+    return htmlContent.replace('</body>', exitSnippet + '\n</body>');
+  } else if (htmlContent.includes('</html>')) {
+    return htmlContent.replace('</html>', exitSnippet + '\n</html>');
+  } else {
+    return htmlContent + '\n' + exitSnippet;
+  }
+}
+
 async function processTwineZipFile(file) {
   if (!window.JSZip) {
     throw new Error("Bibliothèque JSZip non disponible.");
@@ -3634,6 +3728,9 @@ async function processTwineZipFile(file) {
     }
   }
 
+  // Injecter le bouton de sortie au cas où le HTML extrait est lancé directement en autonome
+  htmlContent = ensureExitButtonInTwineHtml(htmlContent);
+
   return {
     htmlContent,
     htmlFilename: htmlFilename.split('/').pop(),
@@ -3644,65 +3741,58 @@ async function processTwineZipFile(file) {
 }
 
 function getCurrentThemeColors() {
-  const isDark = document.body.classList.contains('theme-sombre');
   const isSepia = document.body.classList.contains('theme-sepia');
   const isNature = document.body.classList.contains('theme-nature');
   const isNoel = document.body.classList.contains('theme-noel');
 
-  if (isDark) {
+  // Fond résolument NOIR même dans le mode "Style de l'Antre" pour une immersion totale
+  const deepBlackBg = '#000000';
+  const lightText = '#f3f4f6';
+
+  if (isSepia) {
     return {
-      bg: '#0f1117',
-      text: '#f1f5f9',
+      bg: deepBlackBg,
+      text: lightText,
+      accent: '#f59e0b',
+      accentHover: '#fbbf24',
+      accentSubtle: 'rgba(245, 158, 11, 0.45)',
+      surface: 'rgba(255, 255, 255, 0.08)',
+      surfaceHover: 'rgba(255, 255, 255, 0.16)',
+      border: 'rgba(245, 158, 11, 0.35)'
+    };
+  } else if (isNature) {
+    return {
+      bg: deepBlackBg,
+      text: lightText,
+      accent: '#34d399',
+      accentHover: '#6ee7b7',
+      accentSubtle: 'rgba(52, 211, 153, 0.45)',
+      surface: 'rgba(255, 255, 255, 0.08)',
+      surfaceHover: 'rgba(255, 255, 255, 0.16)',
+      border: 'rgba(52, 211, 153, 0.35)'
+    };
+  } else if (isNoel) {
+    return {
+      bg: deepBlackBg,
+      text: lightText,
+      accent: '#60a5fa',
+      accentHover: '#93c5fd',
+      accentSubtle: 'rgba(96, 165, 250, 0.45)',
+      surface: 'rgba(255, 255, 255, 0.08)',
+      surfaceHover: 'rgba(255, 255, 255, 0.16)',
+      border: 'rgba(96, 165, 250, 0.35)'
+    };
+  } else {
+    // Thème par défaut / Sombre / Clair : fond noir absolu, accent cyan de l'Antre
+    return {
+      bg: deepBlackBg,
+      text: lightText,
       accent: '#38bdf8',
       accentHover: '#7dd3fc',
       accentSubtle: 'rgba(56, 189, 248, 0.45)',
       surface: 'rgba(255, 255, 255, 0.08)',
-      surfaceHover: 'rgba(255, 255, 255, 0.15)',
-      border: 'rgba(255, 255, 255, 0.18)'
-    };
-  } else if (isSepia) {
-    return {
-      bg: '#fbf0d9',
-      text: '#433422',
-      accent: '#b45309',
-      accentHover: '#d97706',
-      accentSubtle: 'rgba(180, 83, 9, 0.45)',
-      surface: 'rgba(0, 0, 0, 0.05)',
-      surfaceHover: 'rgba(0, 0, 0, 0.1)',
-      border: 'rgba(0, 0, 0, 0.16)'
-    };
-  } else if (isNature) {
-    return {
-      bg: '#0d1811',
-      text: '#e6f4ea',
-      accent: '#34d399',
-      accentHover: '#6ee7b7',
-      accentSubtle: 'rgba(52, 211, 153, 0.45)',
-      surface: 'rgba(255, 255, 255, 0.07)',
-      surfaceHover: 'rgba(255, 255, 255, 0.14)',
-      border: 'rgba(255, 255, 255, 0.18)'
-    };
-  } else if (isNoel) {
-    return {
-      bg: '#09182a',
-      text: '#e0f2fe',
-      accent: '#38bdf8',
-      accentHover: '#7dd3fc',
-      accentSubtle: 'rgba(56, 189, 248, 0.45)',
-      surface: 'rgba(255, 255, 255, 0.09)',
       surfaceHover: 'rgba(255, 255, 255, 0.16)',
-      border: 'rgba(56, 189, 248, 0.3)'
-    };
-  } else {
-    return {
-      bg: '#fdfcfb',
-      text: '#1e293b',
-      accent: '#0284c7',
-      accentHover: '#0369a1',
-      accentSubtle: 'rgba(2, 132, 199, 0.35)',
-      surface: '#ffffff',
-      surfaceHover: 'rgba(2, 132, 199, 0.06)',
-      border: 'rgba(0, 0, 0, 0.14)'
+      border: 'rgba(255, 255, 255, 0.20)'
     };
   }
 }
@@ -3884,8 +3974,8 @@ async function openInteractiveFictionModal(writing) {
     if (loader) loader.style.display = 'none';
   };
 
-  // Préférence du style DA mémorisée
-  const daEnabled = localStorage.getItem('caddrillage_twine_da_enabled') !== 'false';
+  // Préférence du style DA mémorisée (par défaut sur false : style d'origine)
+  const daEnabled = localStorage.getItem('caddrillage_twine_da_enabled') === 'true';
   if (toggleDa) toggleDa.checked = daEnabled;
   if (toggleText) toggleText.textContent = daEnabled ? "Style de l'Antre" : "Style d'origine";
 
@@ -3978,7 +4068,7 @@ async function openInteractiveFictionModal(writing) {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) return;
 
-        applyTwineDaStyle(iframeDoc, toggleDa ? toggleDa.checked : true);
+        applyTwineDaStyle(iframeDoc, toggleDa ? toggleDa.checked : false);
 
         const observer = new MutationObserver(() => {
           if (toggleDa && toggleDa.checked) {
@@ -3991,6 +4081,7 @@ async function openInteractiveFictionModal(writing) {
       }
     };
 
+    htmlToLoad = ensureExitButtonInTwineHtml(htmlToLoad);
     const blob = new Blob([htmlToLoad], { type: 'text/html; charset=utf-8' });
     activeInteractiveBlobUrl = URL.createObjectURL(blob);
     iframe.src = activeInteractiveBlobUrl;
@@ -4027,7 +4118,8 @@ async function downloadInteractiveFile(writing, type) {
     if (writing.htmlBlob) {
       blob = writing.htmlBlob;
     } else if (writing.htmlContent) {
-      blob = new Blob([writing.htmlContent], { type: 'text/html;charset=utf-8' });
+      const fullHtml = ensureExitButtonInTwineHtml(writing.htmlContent);
+      blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
     } else if (writing.pdfUrl) {
       showToast("Préparation du fichier autonome (.html)...", "info");
       try {
@@ -4044,9 +4136,12 @@ async function downloadInteractiveFile(writing, type) {
           writing.htmlContent = res.htmlContent;
           writing.htmlFileName = res.htmlFilename;
           filename = res.htmlFilename;
-          blob = new Blob([res.htmlContent], { type: 'text/html;charset=utf-8' });
+          const fullHtml = ensureExitButtonInTwineHtml(res.htmlContent);
+          blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
         } else {
-          blob = fetchedBlob;
+          const text = await fetchedBlob.text();
+          const fullHtml = ensureExitButtonInTwineHtml(text);
+          blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
         }
       } catch (dlErr) {
         url = writing.pdfUrl;
@@ -4122,7 +4217,15 @@ function initInteractiveFictionModal() {
   const dlTweeBtn = document.getElementById('interactiveDlTweeBtn');
   const dlZipBtn = document.getElementById('interactiveDlZipBtn');
 
+  const btnExit = document.getElementById('btnExitInteractiveModal');
+  if (btnExit) btnExit.addEventListener('click', closeInteractiveFictionModal);
   if (btnClose) btnClose.addEventListener('click', closeInteractiveFictionModal);
+
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'caddrillage_close_interactive') {
+      closeInteractiveFictionModal();
+    }
+  });
 
   if (modal) {
     modal.addEventListener('click', (e) => {
@@ -4296,8 +4399,9 @@ function initPublishForm() {
     } else {
       try {
         const text = await file.text();
+        const fullHtml = ensureExitButtonInTwineHtml(text);
         selectedInteractiveData = {
-          htmlContent: text,
+          htmlContent: fullHtml,
           htmlFileName: file.name,
           htmlFileSize: formatFileSize(file.size),
           htmlBlob: file,
@@ -5148,8 +5252,9 @@ function initEditForm() {
     } else {
       try {
         const text = await file.text();
+        const fullHtml = ensureExitButtonInTwineHtml(text);
         newInteractiveData = {
-          htmlContent: text,
+          htmlContent: fullHtml,
           htmlFileName: file.name,
           htmlFileSize: formatFileSize(file.size),
           htmlBlob: file,

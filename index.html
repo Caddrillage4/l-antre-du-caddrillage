@@ -925,13 +925,13 @@
         </div>
 
         <div class="reader-header-actions interactive-header-actions">
-          <!-- Curseur / Bascule pour activer ou désactiver le style de l'Antre -->
+          <!-- Curseur / Bascule pour activer ou désactiver le style de l'Antre (par défaut sur Style d'origine) -->
           <label class="reading-time-toggle interactive-style-toggle" id="twineStyleToggleLabel" title="Basculer entre le style immersif de l'Antre et le style d'origine du jeu">
-            <input type="checkbox" id="toggleTwineDaTheme" class="reading-toggle-input" checked aria-label="Activer le style de l'Antre">
+            <input type="checkbox" id="toggleTwineDaTheme" class="reading-toggle-input" aria-label="Activer le style de l'Antre">
             <span class="reading-toggle-switch">
               <span class="reading-toggle-handle"></span>
             </span>
-            <span class="reading-toggle-text" id="twineStyleToggleText">Style de l'Antre</span>
+            <span class="reading-toggle-text" id="twineStyleToggleText">Style d'origine</span>
           </label>
 
           <!-- Menu Téléchargements multiples -->
@@ -965,6 +965,14 @@
               <line x1="10" y1="14" x2="21" y2="3"></line>
             </svg>
             <span>Plein écran</span>
+          </button>
+
+          <button type="button" class="btn-secondary btn-exit-interactive" id="btnExitInteractiveModal" title="Sortir de la fiction interactive">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span>Sortir</span>
           </button>
 
           <button type="button" class="btn-close-modal" id="btnCloseInteractiveModal" aria-label="Quitter la fiction interactive">&times;</button>
