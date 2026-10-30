@@ -1,5 +1,25 @@
 [
   {
+    "id": "1793364349676",
+    "title": "Projet Pelfort (Démo)",
+    "category": "fiction-interactive",
+    "summary": "Démo de ma première fiction interactive (Travaux en cours) \nVersion : 0.1",
+    "poetryText": "",
+    "tags": [
+      "Méta",
+      "Fiction Interactive"
+    ],
+    "displayDate": "Octobre 2026",
+    "pageCount": null,
+    "wordCount": 15000,
+    "readingTime": "30 min",
+    "pdfUrl": "https://thyiltzizyzlehxhhbjk.supabase.co/storage/v1/object/public/pdfs/1793364349676_1793364349676.zip",
+    "pdfFileName": "Projet Delfort.html",
+    "pdfFileSize": "1.1 Mo",
+    "createdAt": 1793364349676,
+    "updatedAt": 1793364349676
+  },
+  {
     "id": "1792047641471",
     "title": "Tonio et la biscotte divine",
     "category": "nouvelle",

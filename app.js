@@ -202,18 +202,6 @@ async function dbGetAllWritings() {
         };
       });
 
-      // Mise en cache locale automatique de tous les écrits du cloud dans IndexedDB
-      if (db && db.objectStoreNames.contains(DB_CONFIG.storeName)) {
-        try {
-          const transaction = db.transaction([DB_CONFIG.storeName], 'readwrite');
-          const store = transaction.objectStore(DB_CONFIG.storeName);
-          for (const cw of cloudWritings) {
-            store.put(cw);
-          }
-        } catch (e) {
-          console.warn('Erreur mise en cache locale IndexedDB :', e);
-        }
-      }
     }
   } catch (err) {
     console.warn('Supabase temporisé, bascule sur le cache local :', err);
@@ -234,7 +222,14 @@ async function dbGetAllWritings() {
       return {
         ...lw,
         ...cw,
-        pdfBlob: lw.pdfBlob || cw.pdfBlob,
+        pdfBlob: lw.pdfBlob || cw.pdfBlob || null,
+        htmlContent: lw.htmlContent || cw.htmlContent || '',
+        htmlFileName: lw.htmlFileName || cw.htmlFileName || '',
+        zipBlob: lw.zipBlob || cw.zipBlob || null,
+        zipFileName: lw.zipFileName || cw.zipFileName || '',
+        tweeContent: lw.tweeContent || cw.tweeContent || '',
+        tweeFileName: lw.tweeFileName || cw.tweeFileName || '',
+        tweeBlob: lw.tweeBlob || cw.tweeBlob || null,
         pageCount: (cw.pageCount !== null && cw.pageCount !== undefined && cw.pageCount !== '') ? cw.pageCount : (lw.pageCount || null),
         wordCount: (cw.wordCount !== null && cw.wordCount !== undefined && cw.wordCount !== '') ? cw.wordCount : (lw.wordCount || null),
         readingTime: (cw.readingTime && String(cw.readingTime).trim() !== '') ? cw.readingTime : (lw.readingTime || ''),
@@ -248,6 +243,20 @@ async function dbGetAllWritings() {
         merged.push(lw);
       }
     }
+
+    // Mise en cache locale automatique de tous les écrits fusionnés dans IndexedDB
+    if (db && db.objectStoreNames.contains(DB_CONFIG.storeName)) {
+      try {
+        const transaction = db.transaction([DB_CONFIG.storeName], 'readwrite');
+        const store = transaction.objectStore(DB_CONFIG.storeName);
+        for (const mw of merged) {
+          store.put(mw);
+        }
+      } catch (e) {
+        console.warn('Erreur mise en cache locale IndexedDB :', e);
+      }
+    }
+
     return merged.sort((a, b) => b.createdAt - a.createdAt);
   }
 
@@ -3363,7 +3372,7 @@ function renderWritingCard(writing) {
           </button>
           ` : ''}
 
-          ${(writing.zipFileName || writing.zipBlob) ? `
+          ${(writing.zipFileName || writing.zipBlob || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'))) ? `
           <button type="button" class="btn-secondary" id="btn-dl-zip-${writing.id}" title="Télécharger l'archive complète avec images (.zip)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg>
             Archive (.zip)
@@ -3549,19 +3558,24 @@ async function processTwineZipFile(file) {
   let htmlFilename = null;
   let htmlFileObj = null;
 
+  // Ignorer les fichiers système et métadonnées AppleDouble (__MACOSX/, ._*, .DS_Store)
+  const isIgnored = (name) => {
+    return name.includes('__MACOSX') || name.split('/').pop().startsWith('.');
+  };
+
   // 1. Chercher un fichier index.html
   for (const filename in zip.files) {
-    if (!zip.files[filename].dir && filename.toLowerCase().endsWith('index.html')) {
+    if (!zip.files[filename].dir && !isIgnored(filename) && filename.toLowerCase().endsWith('index.html')) {
       htmlFilename = filename;
       htmlFileObj = zip.files[filename];
       break;
     }
   }
 
-  // 2. Sinon le premier .html ou .htm trouvé
+  // 2. Sinon le premier .html ou .htm valide trouvé
   if (!htmlFileObj) {
     for (const filename in zip.files) {
-      if (!zip.files[filename].dir && (filename.toLowerCase().endsWith('.html') || filename.toLowerCase().endsWith('.htm'))) {
+      if (!zip.files[filename].dir && !isIgnored(filename) && (filename.toLowerCase().endsWith('.html') || filename.toLowerCase().endsWith('.htm'))) {
         htmlFilename = filename;
         htmlFileObj = zip.files[filename];
         break;
@@ -3575,11 +3589,11 @@ async function processTwineZipFile(file) {
 
   let htmlContent = await htmlFileObj.async('string');
 
-  // Convertir les images du zip en Data URI pour affichage autonome
+  // Convertir les images du zip en Data URI pour affichage autonome 100% hors-ligne
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
   for (const filename in zip.files) {
     const entry = zip.files[filename];
-    if (entry.dir) continue;
+    if (entry.dir || isIgnored(filename)) continue;
     const lowerName = filename.toLowerCase();
     const isImage = imageExtensions.some(ext => lowerName.endsWith(ext));
 
@@ -3596,16 +3610,35 @@ async function processTwineZipFile(file) {
       const cleanPath = filename.replace(/^(\.\/|\/)/, '');
       const baseName = cleanPath.split('/').pop();
 
+      // Remplacement multi-niveaux des chemins relatifs (chemin complet, basename, encodé)
       htmlContent = htmlContent.split(cleanPath).join(dataUri);
       if (baseName !== cleanPath) {
         htmlContent = htmlContent.split(baseName).join(dataUri);
       }
+      const encodedBaseName = encodeURIComponent(baseName);
+      if (encodedBaseName !== baseName) {
+        htmlContent = htmlContent.split(encodedBaseName).join(dataUri);
+      }
+    }
+  }
+
+  // Extraire également le code source .twee s'il est inclus dans le ZIP
+  let tweeContent = '';
+  let tweeFilename = '';
+  for (const filename in zip.files) {
+    const entry = zip.files[filename];
+    if (!entry.dir && !isIgnored(filename) && filename.toLowerCase().endsWith('.twee')) {
+      tweeFilename = filename.split('/').pop();
+      tweeContent = await entry.async('string');
+      break;
     }
   }
 
   return {
     htmlContent,
     htmlFilename: htmlFilename.split('/').pop(),
+    tweeContent,
+    tweeFilename,
     zipFile: file
   };
 }
@@ -3816,7 +3849,7 @@ function applyTwineDaStyle(iframeDoc, enabled) {
     if (!existingStyle) {
       existingStyle = iframeDoc.createElement('style');
       existingStyle.id = 'antre-twine-style';
-      iframeDoc.head.appendChild(existingStyle);
+      (iframeDoc.head || iframeDoc.documentElement).appendChild(existingStyle);
     }
     existingStyle.textContent = css;
 
@@ -3837,21 +3870,28 @@ async function openInteractiveFictionModal(writing) {
   const dlTweeBtn = document.getElementById('interactiveDlTweeBtn');
   const dlZipBtn = document.getElementById('interactiveDlZipBtn');
   const dropdownMenu = document.getElementById('interactiveDownloadsList');
+  const loader = document.getElementById('interactiveLoader');
+  const loaderText = document.getElementById('interactiveLoaderText');
 
   if (dropdownMenu) dropdownMenu.classList.remove('active');
   if (titleEl) titleEl.textContent = writing.title;
 
-  if (dlTweeBtn) {
-    dlTweeBtn.style.display = (writing.tweeFileName || writing.tweeContent) ? 'flex' : 'none';
-  }
-  if (dlZipBtn) {
-    dlZipBtn.style.display = (writing.zipFileName || writing.zipBlob) ? 'flex' : 'none';
-  }
+  const showLoader = (msg = 'Chargement de la fiction interactive...') => {
+    if (loaderText) loaderText.textContent = msg;
+    if (loader) loader.style.display = 'flex';
+  };
+  const hideLoader = () => {
+    if (loader) loader.style.display = 'none';
+  };
 
   // Préférence du style DA mémorisée
   const daEnabled = localStorage.getItem('caddrillage_twine_da_enabled') !== 'false';
   if (toggleDa) toggleDa.checked = daEnabled;
   if (toggleText) toggleText.textContent = daEnabled ? "Style de l'Antre" : "Style d'origine";
+
+  // Ouvrir la modale immédiatement pour offrir un retour visuel instantané
+  if (modal) modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
 
   if (activeInteractiveBlobUrl) {
     URL.revokeObjectURL(activeInteractiveBlobUrl);
@@ -3860,24 +3900,80 @@ async function openInteractiveFictionModal(writing) {
 
   let htmlToLoad = writing.htmlContent || '';
 
-  if (!htmlToLoad && writing.pdfBlob) {
+  if (!htmlToLoad) {
+    showLoader("Chargement de la fiction interactive...");
     try {
-      const lower = (writing.pdfFileName || '').toLowerCase();
-      if (lower.endsWith('.zip')) {
-        const result = await processTwineZipFile(writing.pdfBlob);
-        htmlToLoad = result.htmlContent;
-        writing.htmlContent = htmlToLoad;
-      } else {
-        htmlToLoad = await writing.pdfBlob.text();
-        writing.htmlContent = htmlToLoad;
+      let sourceBlob = writing.pdfBlob;
+
+      // Si le blob n'est pas en mémoire, le télécharger depuis l'URL publique de stockage
+      if (!sourceBlob && writing.pdfUrl) {
+        showLoader("Téléchargement du projet...");
+        const resp = await fetch(writing.pdfUrl);
+        if (!resp.ok) throw new Error("Fichier introuvable sur le serveur.");
+        sourceBlob = await resp.blob();
+        writing.pdfBlob = sourceBlob;
+      }
+
+      if (sourceBlob) {
+        showLoader("Préparation de l'univers interactif...");
+        const headerBuf = await sourceBlob.slice(0, 4).arrayBuffer();
+        const header = new Uint8Array(headerBuf);
+        const isZip = (header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04)
+          || (writing.pdfFileName && writing.pdfFileName.toLowerCase().endsWith('.zip'))
+          || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'));
+
+        if (isZip) {
+          showLoader("Décompression et intégration des images...");
+          const res = await processTwineZipFile(sourceBlob);
+          htmlToLoad = res.htmlContent;
+          writing.htmlContent = res.htmlContent;
+          writing.htmlFileName = res.htmlFilename;
+          writing.zipBlob = sourceBlob;
+          writing.zipFileName = writing.zipFileName || writing.pdfFileName || `${slugify(writing.title)}.zip`;
+          if (res.tweeContent) {
+            writing.tweeContent = res.tweeContent;
+            writing.tweeFileName = res.tweeFilename;
+          }
+        } else {
+          htmlToLoad = await sourceBlob.text();
+          writing.htmlContent = htmlToLoad;
+          writing.htmlFileName = writing.pdfFileName || `${slugify(writing.title)}.html`;
+        }
+
+        // Sauvegarde locale dans IndexedDB pour que les futurs lancements soient immédiats
+        if (db && db.objectStoreNames.contains(DB_CONFIG.storeName)) {
+          try {
+            const tx = db.transaction([DB_CONFIG.storeName], 'readwrite');
+            tx.objectStore(DB_CONFIG.storeName).put({ ...writing });
+          } catch (cacheErr) {
+            console.warn('Erreur mise en cache locale IndexedDB:', cacheErr);
+          }
+        }
       }
     } catch (err) {
-      console.warn('Erreur lecture blob fiction interactive:', err);
+      console.error('Erreur chargement fiction interactive:', err);
+      hideLoader();
+      showToast("Impossible d'ouvrir cette fiction interactive : " + err.message, "error");
+      return;
     }
+  }
+
+  if (dlTweeBtn) {
+    dlTweeBtn.style.display = (writing.tweeFileName || writing.tweeContent) ? 'flex' : 'none';
+  }
+  if (dlZipBtn) {
+    dlZipBtn.style.display = (writing.zipFileName || writing.zipBlob || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'))) ? 'flex' : 'none';
+  }
+
+  if (!htmlToLoad) {
+    hideLoader();
+    showToast('Fichier de jeu introuvable pour cette fiction.', '⚠️');
+    return;
   }
 
   if (iframe) {
     iframe.onload = () => {
+      hideLoader();
       try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) return;
@@ -3891,31 +3987,23 @@ async function openInteractiveFictionModal(writing) {
         });
         observer.observe(iframeDoc.body, { childList: true, subtree: true });
       } catch (e) {
-        console.warn('Origine iframe distincte ou sandbox restreint:', e);
+        console.warn('Accès style DA iframe:', e);
       }
     };
 
-    if (htmlToLoad) {
-      const blob = new Blob([htmlToLoad], { type: 'text/html; charset=utf-8' });
-      activeInteractiveBlobUrl = URL.createObjectURL(blob);
-      iframe.src = activeInteractiveBlobUrl;
-    } else if (writing.pdfUrl) {
-      iframe.src = writing.pdfUrl;
-    } else {
-      showToast('Fichier de jeu introuvable pour cette fiction.', '⚠️');
-      return;
-    }
+    const blob = new Blob([htmlToLoad], { type: 'text/html; charset=utf-8' });
+    activeInteractiveBlobUrl = URL.createObjectURL(blob);
+    iframe.src = activeInteractiveBlobUrl;
   }
-
-  if (modal) modal.classList.add('active');
-  document.body.style.overflow = 'hidden';
 }
 
 function closeInteractiveFictionModal() {
   const modal = document.getElementById('interactiveFictionModal');
   const iframe = document.getElementById('interactiveFictionFrame');
   const container = document.getElementById('interactiveFictionContainer');
+  const loader = document.getElementById('interactiveLoader');
 
+  if (loader) loader.style.display = 'none';
   if (iframe) iframe.src = 'about:blank';
   if (modal) modal.classList.remove('active');
   if (container) container.classList.remove('is-fullscreen');
@@ -3927,7 +4015,7 @@ function closeInteractiveFictionModal() {
   }
 }
 
-function downloadInteractiveFile(writing, type) {
+async function downloadInteractiveFile(writing, type) {
   let blob = null;
   let filename = '';
   let url = '';
@@ -3940,10 +4028,29 @@ function downloadInteractiveFile(writing, type) {
       blob = writing.htmlBlob;
     } else if (writing.htmlContent) {
       blob = new Blob([writing.htmlContent], { type: 'text/html;charset=utf-8' });
-    } else if (writing.pdfBlob) {
-      blob = writing.pdfBlob;
-    } else if (writing.htmlUrl || writing.pdfUrl) {
-      url = writing.htmlUrl || writing.pdfUrl;
+    } else if (writing.pdfUrl) {
+      showToast("Préparation du fichier autonome (.html)...", "info");
+      try {
+        const resp = await fetch(writing.pdfUrl);
+        const fetchedBlob = await resp.blob();
+        const headerBuf = await fetchedBlob.slice(0, 4).arrayBuffer();
+        const header = new Uint8Array(headerBuf);
+        const isZip = (header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04)
+          || (writing.pdfFileName && writing.pdfFileName.toLowerCase().endsWith('.zip'))
+          || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'));
+
+        if (isZip) {
+          const res = await processTwineZipFile(fetchedBlob);
+          writing.htmlContent = res.htmlContent;
+          writing.htmlFileName = res.htmlFilename;
+          filename = res.htmlFilename;
+          blob = new Blob([res.htmlContent], { type: 'text/html;charset=utf-8' });
+        } else {
+          blob = fetchedBlob;
+        }
+      } catch (dlErr) {
+        url = writing.pdfUrl;
+      }
     }
   } else if (type === 'twee') {
     filename = writing.tweeFileName || `${safeTitle}.twee`;
@@ -3951,8 +4058,20 @@ function downloadInteractiveFile(writing, type) {
       blob = writing.tweeBlob;
     } else if (writing.tweeContent) {
       blob = new Blob([writing.tweeContent], { type: 'text/plain;charset=utf-8' });
-    } else if (writing.tweeUrl) {
-      url = writing.tweeUrl;
+    } else if (writing.pdfUrl && (writing.pdfUrl.toLowerCase().endsWith('.zip') || writing.pdfBlob)) {
+      showToast("Extraction du code source (.twee)...", "info");
+      try {
+        const source = writing.pdfBlob || (await (await fetch(writing.pdfUrl)).blob());
+        const res = await processTwineZipFile(source);
+        if (res.tweeContent) {
+          writing.tweeContent = res.tweeContent;
+          writing.tweeFileName = res.tweeFilename || filename;
+          filename = writing.tweeFileName;
+          blob = new Blob([res.tweeContent], { type: 'text/plain;charset=utf-8' });
+        }
+      } catch (tweeErr) {
+        console.warn('Erreur extraction twee:', tweeErr);
+      }
     }
   } else if (type === 'zip') {
     filename = writing.zipFileName || `${safeTitle}.zip`;
@@ -3960,6 +4079,8 @@ function downloadInteractiveFile(writing, type) {
       blob = writing.zipBlob;
     } else if (writing.zipUrl) {
       url = writing.zipUrl;
+    } else if (writing.pdfUrl && (writing.pdfUrl.toLowerCase().endsWith('.zip') || (writing.pdfFileName && writing.pdfFileName.toLowerCase().endsWith('.zip')))) {
+      url = writing.pdfUrl;
     }
   }
 
