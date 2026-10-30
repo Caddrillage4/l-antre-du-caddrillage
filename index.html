@@ -111,6 +111,10 @@
             <span>Poésie</span>
             <span class="category-count" id="countPoesie">(0)</span>
           </button>
+          <button type="button" class="category-tab" data-category="fiction-interactive">
+            <span>Fiction interactive</span>
+            <span class="category-count" id="countFictionInteractive">(0)</span>
+          </button>
         </div>
       </nav>
 
@@ -182,6 +186,7 @@
                   <option value="nouvelle-longue">Nouvelle longue</option>
                   <option value="roman">Roman</option>
                   <option value="poesie">Poésie</option>
+                  <option value="fiction-interactive">Fiction interactive</option>
                 </select>
               </div>
 
@@ -252,12 +257,13 @@
                 <option value="nouvelle-longue">Nouvelle longue</option>
                 <option value="roman">Roman</option>
                 <option value="poesie">Poésie</option>
+                <option value="fiction-interactive">Fiction interactive</option>
               </select>
             </div>
 
-            <!-- Résumé standard (pour les récits en prose) -->
+            <!-- Résumé standard (pour les récits en prose et fictions interactives) -->
             <div class="form-group" id="pubSummaryGroup">
-              <label class="form-label" for="pubSummary">Résumé *</label>
+              <label class="form-label" for="pubSummary" id="pubSummaryLabel">Résumé *</label>
               <textarea id="pubSummary" class="form-textarea" placeholder="Rédigez un court résumé ou un avant-propos pour donner envie de lire..."></textarea>
             </div>
 
@@ -283,10 +289,11 @@
               <div class="form-hint">Tapez le texte de votre choix (ex: Octobre 2026). Si laissé vide, la date du jour sera utilisée.</div>
             </div>
 
-            <div class="form-group">
+            <!-- Zone d'envoi pour document PDF (Nouvelle, Nouvelle longue, Roman, Poésie) -->
+            <div class="form-group" id="pubPdfGroup">
               <label class="form-label">Document PDF de l'écrit *</label>
               <div class="pdf-upload-box" id="uploadDropZone">
-                <input type="file" id="pubPdfFile" accept="application/pdf" required>
+                <input type="file" id="pubPdfFile" accept="application/pdf">
                 <span class="upload-icon">📄</span>
                 <p class="upload-text">Cliquez ou glissez-déposez le fichier PDF ici</p>
                 <p class="upload-subtext">Format PDF uniquement (le texte poétique en sera extrait automatiquement)</p>
@@ -300,20 +307,44 @@
               </div>
             </div>
 
-            <!-- Indicateurs de lecture calculés automatiquement et modifiables (masqués pour la poésie) -->
-            <div class="form-group" id="pubMetricsGroup">
-              <label class="form-label">Détails de lecture (Pages, Mots, Temps estimé)</label>
-              <div class="form-row-metrics">
+            <!-- Zone d'envoi pour Fiction interactive Twine (HTML ou ZIP + TWEE optionnel) -->
+            <div class="form-group" id="pubInteractiveGroup" style="display: none;">
+              <label class="form-label">Fichier du jeu interactif * (Projet Twine .html ou archive .zip avec images)</label>
+              <div class="pdf-upload-box interactive-upload-box" id="uploadInteractiveDropZone">
+                <input type="file" id="pubInteractiveFile" accept=".html,.htm,.zip">
+                <span class="upload-icon">🧭</span>
+                <p class="upload-text">Cliquez ou glissez-déposez le jeu (.html) ou l'archive (.zip) ici</p>
+                <p class="upload-subtext">Fichier HTML autonome compilé depuis Twine, ou archive ZIP contenant index.html et sous-dossier d'images</p>
+              </div>
+              <div class="file-selected-status" id="interactiveFileStatusBox">
                 <div>
+                  <div class="file-name-text" id="selectedInteractiveFileName">jeu_twine.html</div>
+                  <div class="file-size-text" id="selectedInteractiveFileSize">Taille : 0 Ko</div>
+                </div>
+                <button type="button" class="btn-sm-action" id="btnClearInteractiveFile">Changer</button>
+              </div>
+
+              <div style="margin-top: 14px;">
+                <label class="form-sublabel" for="pubTweeFile" style="font-weight: 600; margin-bottom: 6px; display: block;">Fichier source Twine optionnel (.twee ou .txt)</label>
+                <input type="file" id="pubTweeFile" accept=".twee,.txt" class="form-input">
+                <div class="form-hint" style="margin-top: 4px;">Optionnel : permet aux lecteurs et écrivains curieux de télécharger l'arborescence brute des nœuds textuels.</div>
+              </div>
+            </div>
+
+            <!-- Indicateurs de lecture / jeu calculés ou saisis manuellement -->
+            <div class="form-group" id="pubMetricsGroup">
+              <label class="form-label" id="pubMetricsGroupLabel">Détails de lecture (Pages, Mots, Temps estimé)</label>
+              <div class="form-row-metrics">
+                <div id="pubPageCountCol">
                   <label class="form-sublabel" for="pubPageCount">Pages</label>
                   <input type="number" id="pubPageCount" class="form-input" min="1" placeholder="Auto">
                 </div>
                 <div>
-                  <label class="form-sublabel" for="pubWordCount">Nombre de mots</label>
+                  <label class="form-sublabel" for="pubWordCount" id="pubWordCountLabel">Nombre de mots</label>
                   <input type="number" id="pubWordCount" class="form-input" min="0" placeholder="Auto">
                 </div>
                 <div>
-                  <label class="form-sublabel" for="pubReadingTime">Temps de lecture estimé</label>
+                  <label class="form-sublabel" for="pubReadingTime" id="pubReadingTimeLabel">Temps de lecture estimé</label>
                   <input type="text" id="pubReadingTime" class="form-input" placeholder="Ex: ~15 min ou 1 h 20">
                 </div>
               </div>
@@ -880,6 +911,73 @@
   </div>
 
   <!-- =========================================================
+       MODALE LECTEUR DE FICTION INTERACTIVE (TWINE)
+       ========================================================= -->
+  <div class="modal-backdrop interactive-fiction-backdrop" id="interactiveFictionModal">
+    <div class="modal-container interactive-fiction-modal" id="interactiveFictionContainer">
+      <div class="modal-header interactive-fiction-header">
+        <div class="reader-header-left">
+          <span class="interactive-header-icon" title="Fiction interactive">🧭</span>
+          <div style="min-width: 0;">
+            <h3 class="reader-doc-title" id="interactiveTitle">Titre de la fiction</h3>
+            <span class="card-category-badge badge-interactive" style="font-size: 0.68rem; padding: 2px 8px; margin-top: 2px; display: inline-block;">Fiction interactive</span>
+          </div>
+        </div>
+
+        <div class="reader-header-actions interactive-header-actions">
+          <!-- Curseur / Bascule pour activer ou désactiver le style de l'Antre -->
+          <label class="reading-time-toggle interactive-style-toggle" id="twineStyleToggleLabel" title="Basculer entre le style immersif de l'Antre et le style d'origine du jeu">
+            <input type="checkbox" id="toggleTwineDaTheme" class="reading-toggle-input" checked aria-label="Activer le style de l'Antre">
+            <span class="reading-toggle-switch">
+              <span class="reading-toggle-handle"></span>
+            </span>
+            <span class="reading-toggle-text" id="twineStyleToggleText">Style de l'Antre</span>
+          </label>
+
+          <!-- Menu Téléchargements multiples -->
+          <div class="interactive-downloads-dropdown" id="interactiveDownloadsDropdown">
+            <button type="button" class="btn-secondary" id="btnInteractiveDownloadsMenu" title="Télécharger les fichiers du projet">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Télécharger</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="interactive-downloads-menu" id="interactiveDownloadsList">
+              <button type="button" class="interactive-dl-item" id="interactiveDlHtmlBtn">
+                <span>🌐 Jeu autonome (.html)</span>
+              </button>
+              <button type="button" class="interactive-dl-item" id="interactiveDlTweeBtn" style="display: none;">
+                <span>📜 Source Twine (.twee)</span>
+              </button>
+              <button type="button" class="interactive-dl-item" id="interactiveDlZipBtn" style="display: none;">
+                <span>📦 Archive complète (.zip)</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="btn-secondary" id="interactiveFullscreenBtn" title="Mode plein écran">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            <span>Plein écran</span>
+          </button>
+
+          <button type="button" class="btn-close-modal" id="btnCloseInteractiveModal" aria-label="Quitter la fiction interactive">&times;</button>
+        </div>
+      </div>
+
+      <div class="interactive-frame-container" id="interactiveFrameContainer">
+        <iframe id="interactiveFictionFrame" class="interactive-fiction-frame" title="Liseuse de fiction interactive" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
        MODALE DE MODIFICATION D'UN ÉCRIT
        ========================================================= -->
   <div class="modal-backdrop" id="editModal">
@@ -904,12 +1002,13 @@
               <option value="nouvelle-longue">Nouvelle longue</option>
               <option value="roman">Roman</option>
               <option value="poesie">Poésie</option>
+              <option value="fiction-interactive">Fiction interactive</option>
             </select>
           </div>
 
-          <!-- Résumé standard (pour les récits en prose) -->
+          <!-- Résumé standard (pour les récits en prose et fictions interactives) -->
           <div class="form-group" id="editSummaryGroup">
-            <label class="form-label" for="editSummary">Résumé *</label>
+            <label class="form-label" for="editSummary" id="editSummaryLabel">Résumé *</label>
             <textarea id="editSummary" class="form-textarea"></textarea>
           </div>
 
@@ -934,7 +1033,8 @@
             <div class="form-hint">Texte affiché sur la vitrine pour cet écrit.</div>
           </div>
 
-          <div class="form-group">
+          <!-- Remplacement PDF (Nouvelle, Roman, Poésie) -->
+          <div class="form-group" id="editPdfGroup">
             <label class="form-label">Remplacer le document PDF (optionnel)</label>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;" id="editCurrentPdfInfo">
               PDF actuel conservé : document.pdf
@@ -954,25 +1054,52 @@
             </div>
           </div>
 
+          <!-- Remplacement Fiction interactive Twine (HTML ou ZIP + TWEE optionnel) -->
+          <div class="form-group" id="editInteractiveGroup" style="display: none;">
+            <label class="form-label">Remplacer le jeu interactif (optionnel)</label>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;" id="editCurrentInteractiveInfo">
+              Jeu actuel conservé : jeu.html
+            </p>
+            <div class="pdf-upload-box interactive-upload-box" id="editUploadInteractiveDropZone">
+              <input type="file" id="editInteractiveFile" accept=".html,.htm,.zip">
+              <span class="upload-icon">🧭</span>
+              <p class="upload-text">Sélectionner un nouveau jeu (.html) ou archive (.zip) pour remplacer l'existant</p>
+              <p class="upload-subtext">Laissez vide pour conserver les fichiers actuels</p>
+            </div>
+            <div class="file-selected-status" id="editInteractiveFileStatusBox">
+              <div>
+                <div class="file-name-text" id="editSelectedInteractiveFileName">Nouveau_jeu.html</div>
+                <div class="file-size-text" id="editSelectedInteractiveFileSize">Taille : 0 Ko</div>
+              </div>
+              <button type="button" class="btn-sm-action" id="btnCancelEditInteractive">Annuler</button>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <label class="form-sublabel" for="editTweeFile" style="font-weight: 600; margin-bottom: 6px; display: block;">Remplacer le fichier source Twine (.twee ou .txt)</label>
+              <input type="file" id="editTweeFile" accept=".twee,.txt" class="form-input">
+              <div class="form-hint" style="margin-top: 4px;" id="editCurrentTweeInfo">Laissez vide pour conserver le code source existant.</div>
+            </div>
+          </div>
+
           <!-- Indicateurs de lecture modifiables -->
           <div class="form-group" id="editMetricsGroup">
-            <label class="form-label">Détails de lecture (Pages, Mots, Temps estimé)</label>
+            <label class="form-label" id="editMetricsGroupLabel">Détails de lecture (Pages, Mots, Temps estimé)</label>
             <div class="form-row-metrics">
-              <div>
+              <div id="editPageCountCol">
                 <label class="form-sublabel" for="editPageCount">Pages</label>
                 <input type="number" id="editPageCount" class="form-input" min="1" placeholder="Auto">
               </div>
               <div>
-                <label class="form-sublabel" for="editWordCount">Nombre de mots</label>
+                <label class="form-sublabel" for="editWordCount" id="editWordCountLabel">Nombre de mots</label>
                 <input type="number" id="editWordCount" class="form-input" min="0" placeholder="Auto">
               </div>
               <div>
-                <label class="form-sublabel" for="editReadingTime">Temps de lecture estimé</label>
+                <label class="form-sublabel" for="editReadingTime" id="editReadingTimeLabel">Temps de lecture estimé</label>
                 <input type="text" id="editReadingTime" class="form-input" placeholder="Ex: ~15 min ou 1 h 20">
               </div>
             </div>
             <div class="form-hint" id="editMetricsStatusHint">
-              Modifiable à tout moment. Si un nouveau PDF est chargé, ces valeurs sont recalculées automatiquement.
+              Modifiable à tout moment. Si un nouveau fichier est chargé, ces valeurs peuvent être recalculées ou ajustées.
             </div>
           </div>
 

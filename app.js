@@ -16,7 +16,8 @@ const CATEGORIES_LABELS = {
   'nouvelle': 'Nouvelle',
   'nouvelle-longue': 'Nouvelle longue',
   'roman': 'Roman',
-  'poesie': 'Poésie'
+  'poesie': 'Poésie',
+  'fiction-interactive': 'Fiction interactive'
 };
 
 // Configuration Supabase en ligne (base de données et stockage des PDF)
@@ -354,7 +355,7 @@ async function dbGetWritingById(id) {
   });
 }
 
-// Upload du fichier PDF vers le bucket Supabase
+// Upload du fichier (PDF, HTML, ZIP, TWEE) vers le bucket Supabase
 async function uploadPdfToSupabase(file, writingId) {
   const client = getSupabaseClient();
   if (!client) {
@@ -363,14 +364,31 @@ async function uploadPdfToSupabase(file, writingId) {
 
   const cleanId = String(writingId).replace(/[^a-zA-Z0-9_-]/g, '');
   const timestamp = Date.now();
-  const filePath = `${cleanId}_${timestamp}.pdf`;
+
+  let ext = 'pdf';
+  let contentType = 'application/pdf';
+  if (file && file.name) {
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      ext = 'html';
+      contentType = 'text/html; charset=utf-8';
+    } else if (lower.endsWith('.zip')) {
+      ext = 'zip';
+      contentType = 'application/zip';
+    } else if (lower.endsWith('.twee') || lower.endsWith('.txt')) {
+      ext = 'twee';
+      contentType = 'text/plain; charset=utf-8';
+    }
+  }
+
+  const filePath = `${cleanId}_${timestamp}.${ext}`;
 
   const { data, error } = await client.storage
     .from(SUPABASE_CONFIG.bucket)
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: true,
-      contentType: 'application/pdf'
+      contentType: contentType
     });
 
   if (error) {
@@ -2846,13 +2864,18 @@ async function refreshShowcase() {
 
     filtered.forEach(w => {
       // Déclenche l'analyse en tâche de fond pour les écrits qui n'ont pas encore leurs statistiques
-      if (w.category !== 'poesie' && (!w.pageCount || !w.wordCount || !w.readingTime)) {
+      if (w.category !== 'poesie' && w.category !== 'fiction-interactive' && (!w.pageCount || !w.wordCount || !w.readingTime)) {
         ensureWritingReadingStats(w);
       }
 
       const readBtn = document.getElementById(`btn-read-${w.id}`);
       const dlBtn = document.getElementById(`btn-dl-${w.id}`);
       const commentBtn = document.getElementById(`btn-comment-${w.id}`);
+
+      const playBtn = document.getElementById(`btn-play-${w.id}`);
+      const dlHtmlBtn = document.getElementById(`btn-dl-html-${w.id}`);
+      const dlTweeBtn = document.getElementById(`btn-dl-twee-${w.id}`);
+      const dlZipBtn = document.getElementById(`btn-dl-zip-${w.id}`);
 
       if (readBtn) {
         readBtn.addEventListener('click', () => openPdfReader(w));
@@ -2861,6 +2884,27 @@ async function refreshShowcase() {
         dlBtn.addEventListener('click', (e) => {
           e.preventDefault();
           downloadPdfFile(w);
+        });
+      }
+      if (playBtn) {
+        playBtn.addEventListener('click', () => openInteractiveFictionModal(w));
+      }
+      if (dlHtmlBtn) {
+        dlHtmlBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          downloadInteractiveFile(w, 'html');
+        });
+      }
+      if (dlTweeBtn) {
+        dlTweeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          downloadInteractiveFile(w, 'twee');
+        });
+      }
+      if (dlZipBtn) {
+        dlZipBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          downloadInteractiveFile(w, 'zip');
         });
       }
       if (commentBtn) {
@@ -3151,18 +3195,21 @@ function updateCategoryCounters(writings) {
   const countNouvelleLongue = writings.filter(w => w.category === 'nouvelle-longue').length;
   const countRoman = writings.filter(w => w.category === 'roman').length;
   const countPoesie = writings.filter(w => w.category === 'poesie').length;
+  const countFictionInteractive = writings.filter(w => w.category === 'fiction-interactive').length;
 
   const elAll = document.getElementById('countAll');
   const elNouvelle = document.getElementById('countNouvelle');
   const elNouvelleLongue = document.getElementById('countNouvelleLongue');
   const elRoman = document.getElementById('countRoman');
   const elPoesie = document.getElementById('countPoesie');
+  const elFictionInteractive = document.getElementById('countFictionInteractive');
 
   if (elAll) elAll.textContent = `(${countAll})`;
   if (elNouvelle) elNouvelle.textContent = `(${countNouvelle})`;
   if (elNouvelleLongue) elNouvelleLongue.textContent = `(${countNouvelleLongue})`;
   if (elRoman) elRoman.textContent = `(${countRoman})`;
   if (elPoesie) elPoesie.textContent = `(${countPoesie})`;
+  if (elFictionInteractive) elFictionInteractive.textContent = `(${countFictionInteractive})`;
 }
 
 window.togglePoetryExpand = function(id) {
@@ -3186,6 +3233,7 @@ window.togglePoetryExpand = function(id) {
 
 function renderWritingCard(writing) {
   const isPoetry = writing.category === 'poesie';
+  const isInteractive = writing.category === 'fiction-interactive';
   const categoryLabel = CATEGORIES_LABELS[writing.category] || writing.category;
 
   const formattedDate = (writing.displayDate && String(writing.displayDate).trim())
@@ -3231,6 +3279,97 @@ function renderWritingCard(writing) {
             </svg>
             Télécharger (PDF)
           </button>
+          <button type="button" class="btn-comment" id="btn-comment-${writing.id}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Laisser un mot
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  // Fiction interactive (Twine)
+  if (isInteractive) {
+    let tagsList = [];
+    if (Array.isArray(writing.tags)) {
+      tagsList = writing.tags;
+    } else if (typeof writing.tags === 'string') {
+      try {
+        const parsed = JSON.parse(writing.tags);
+        tagsList = Array.isArray(parsed) ? parsed : writing.tags.split(',');
+      } catch (e) {
+        tagsList = writing.tags.split(',');
+      }
+    }
+    tagsList = tagsList.map(t => String(t).trim()).filter(Boolean);
+
+    const tagsHtml = tagsList.length > 0
+      ? `<div class="card-tags">
+          ${tagsList.map(t => `<span class="card-tag">#${escapeHtml(t)}</span>`).join('')}
+         </div>`
+      : '';
+
+    return `
+      <article class="writing-card interactive-fiction-card" id="card-${writing.id}">
+        <div class="card-top">
+          <span class="card-category-badge badge-interactive">🧭 ${escapeHtml(categoryLabel)}</span>
+          <span class="card-date">${formattedDate}</span>
+        </div>
+        <h3 class="card-title">${escapeHtml(writing.title)}</h3>
+
+        <div class="card-reading-stats" id="stats-${writing.id}">
+          ${writing.readingTime ? `
+            <span class="stat-pill" title="Durée estimée d'une partie">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              ${escapeHtml(writing.readingTime)}
+            </span>` : ''}
+          ${writing.wordCount ? `
+            <span class="stat-pill" title="Nombre total de mots">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>
+              ${Number(writing.wordCount).toLocaleString('fr-FR')} mots
+            </span>` : ''}
+          <span class="stat-pill stat-pill-branching" title="Récit à embranchements & choix">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+            À choix multiples
+          </span>
+        </div>
+
+        <p class="card-summary">${escapeHtml(writing.summary)}</p>
+        ${tagsHtml}
+
+        <div class="card-actions card-actions-interactive">
+          <button type="button" class="btn-read btn-play-interactive" id="btn-play-${writing.id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Lancer la fiction
+          </button>
+
+          <button type="button" class="btn-download" id="btn-dl-html-${writing.id}" title="Télécharger le jeu autonome (.html)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Jeu (.html)
+          </button>
+
+          ${(writing.tweeFileName || writing.tweeContent) ? `
+          <button type="button" class="btn-secondary" id="btn-dl-twee-${writing.id}" title="Télécharger le code source des nœuds (.twee)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            Source (.twee)
+          </button>
+          ` : ''}
+
+          ${(writing.zipFileName || writing.zipBlob) ? `
+          <button type="button" class="btn-secondary" id="btn-dl-zip-${writing.id}" title="Télécharger l'archive complète avec images (.zip)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+            Archive (.zip)
+          </button>
+          ` : ''}
+
           <button type="button" class="btn-comment" id="btn-comment-${writing.id}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -3394,6 +3533,542 @@ function downloadPdfFile(writing) {
 }
 
 // =========================================================
+// GESTION DES FICTIONS INTERACTIVES (TWINE, .HTML, .ZIP, .TWEE)
+// =========================================================
+
+let currentInteractiveWriting = null;
+let activeInteractiveBlobUrl = null;
+
+async function processTwineZipFile(file) {
+  if (!window.JSZip) {
+    throw new Error("Bibliothèque JSZip non disponible.");
+  }
+
+  const zip = await JSZip.loadAsync(file);
+
+  let htmlFilename = null;
+  let htmlFileObj = null;
+
+  // 1. Chercher un fichier index.html
+  for (const filename in zip.files) {
+    if (!zip.files[filename].dir && filename.toLowerCase().endsWith('index.html')) {
+      htmlFilename = filename;
+      htmlFileObj = zip.files[filename];
+      break;
+    }
+  }
+
+  // 2. Sinon le premier .html ou .htm trouvé
+  if (!htmlFileObj) {
+    for (const filename in zip.files) {
+      if (!zip.files[filename].dir && (filename.toLowerCase().endsWith('.html') || filename.toLowerCase().endsWith('.htm'))) {
+        htmlFilename = filename;
+        htmlFileObj = zip.files[filename];
+        break;
+      }
+    }
+  }
+
+  if (!htmlFileObj) {
+    throw new Error("Aucun fichier HTML trouvé dans l'archive ZIP.");
+  }
+
+  let htmlContent = await htmlFileObj.async('string');
+
+  // Convertir les images du zip en Data URI pour affichage autonome
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+  for (const filename in zip.files) {
+    const entry = zip.files[filename];
+    if (entry.dir) continue;
+    const lowerName = filename.toLowerCase();
+    const isImage = imageExtensions.some(ext => lowerName.endsWith(ext));
+
+    if (isImage) {
+      let mimeType = 'image/png';
+      if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+      else if (lowerName.endsWith('.gif')) mimeType = 'image/gif';
+      else if (lowerName.endsWith('.webp')) mimeType = 'image/webp';
+      else if (lowerName.endsWith('.svg')) mimeType = 'image/svg+xml';
+
+      const base64Data = await entry.async('base64');
+      const dataUri = `data:${mimeType};base64,${base64Data}`;
+
+      const cleanPath = filename.replace(/^(\.\/|\/)/, '');
+      const baseName = cleanPath.split('/').pop();
+
+      htmlContent = htmlContent.split(cleanPath).join(dataUri);
+      if (baseName !== cleanPath) {
+        htmlContent = htmlContent.split(baseName).join(dataUri);
+      }
+    }
+  }
+
+  return {
+    htmlContent,
+    htmlFilename: htmlFilename.split('/').pop(),
+    zipFile: file
+  };
+}
+
+function getCurrentThemeColors() {
+  const isDark = document.body.classList.contains('theme-sombre');
+  const isSepia = document.body.classList.contains('theme-sepia');
+  const isNature = document.body.classList.contains('theme-nature');
+  const isNoel = document.body.classList.contains('theme-noel');
+
+  if (isDark) {
+    return {
+      bg: '#0f1117',
+      text: '#f1f5f9',
+      accent: '#38bdf8',
+      accentHover: '#7dd3fc',
+      accentSubtle: 'rgba(56, 189, 248, 0.45)',
+      surface: 'rgba(255, 255, 255, 0.08)',
+      surfaceHover: 'rgba(255, 255, 255, 0.15)',
+      border: 'rgba(255, 255, 255, 0.18)'
+    };
+  } else if (isSepia) {
+    return {
+      bg: '#fbf0d9',
+      text: '#433422',
+      accent: '#b45309',
+      accentHover: '#d97706',
+      accentSubtle: 'rgba(180, 83, 9, 0.45)',
+      surface: 'rgba(0, 0, 0, 0.05)',
+      surfaceHover: 'rgba(0, 0, 0, 0.1)',
+      border: 'rgba(0, 0, 0, 0.16)'
+    };
+  } else if (isNature) {
+    return {
+      bg: '#0d1811',
+      text: '#e6f4ea',
+      accent: '#34d399',
+      accentHover: '#6ee7b7',
+      accentSubtle: 'rgba(52, 211, 153, 0.45)',
+      surface: 'rgba(255, 255, 255, 0.07)',
+      surfaceHover: 'rgba(255, 255, 255, 0.14)',
+      border: 'rgba(255, 255, 255, 0.18)'
+    };
+  } else if (isNoel) {
+    return {
+      bg: '#09182a',
+      text: '#e0f2fe',
+      accent: '#38bdf8',
+      accentHover: '#7dd3fc',
+      accentSubtle: 'rgba(56, 189, 248, 0.45)',
+      surface: 'rgba(255, 255, 255, 0.09)',
+      surfaceHover: 'rgba(255, 255, 255, 0.16)',
+      border: 'rgba(56, 189, 248, 0.3)'
+    };
+  } else {
+    return {
+      bg: '#fdfcfb',
+      text: '#1e293b',
+      accent: '#0284c7',
+      accentHover: '#0369a1',
+      accentSubtle: 'rgba(2, 132, 199, 0.35)',
+      surface: '#ffffff',
+      surfaceHover: 'rgba(2, 132, 199, 0.06)',
+      border: 'rgba(0, 0, 0, 0.14)'
+    };
+  }
+}
+
+function markBlockChoicesInTwine(iframeDoc) {
+  if (!iframeDoc) return;
+  try {
+    const links = iframeDoc.querySelectorAll('tw-link, a.link-internal');
+    links.forEach(link => {
+      const parent = link.parentElement;
+      if (!parent) return;
+
+      const parentTag = parent.tagName.toLowerCase();
+      if (parentTag === 'tw-passage' || parent.classList.contains('passage')) {
+        link.setAttribute('data-block-choice', 'true');
+        return;
+      }
+
+      // Si le paragraphe parent ne contient essentiellement que ce lien (ou des liens consécutifs)
+      const parentText = parent.textContent.trim();
+      const linkText = link.textContent.trim();
+      if (parentText === linkText) {
+        link.setAttribute('data-block-choice', 'true');
+      }
+    });
+  } catch (err) {
+    console.warn('Erreur analyse choix Twine:', err);
+  }
+}
+
+function applyTwineDaStyle(iframeDoc, enabled) {
+  if (!iframeDoc) return;
+  try {
+    let existingStyle = iframeDoc.getElementById('antre-twine-style');
+
+    if (!enabled) {
+      if (existingStyle) existingStyle.remove();
+      return;
+    }
+
+    const theme = getCurrentThemeColors();
+
+    const css = `
+      :root {
+        --twine-bg: ${theme.bg};
+        --twine-text: ${theme.text};
+        --twine-accent: ${theme.accent};
+        --twine-accent-hover: ${theme.accentHover};
+        --twine-accent-subtle: ${theme.accentSubtle};
+        --twine-surface: ${theme.surface};
+        --twine-surface-hover: ${theme.surfaceHover};
+        --twine-border: ${theme.border};
+        --font-family: Calibri, 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      }
+
+      body, html, tw-story, #story, .passage, tw-passage {
+        font-family: var(--font-family) !important;
+        line-height: 1.75 !important;
+        font-size: 1.15rem !important;
+        letter-spacing: 0.2px !important;
+        background-color: var(--twine-bg) !important;
+        color: var(--twine-text) !important;
+        transition: background-color 0.25s ease, color 0.25s ease !important;
+      }
+
+      /* Liens INLINE intégrés au fil du texte */
+      p tw-link,
+      p a.link-internal,
+      tw-passage p tw-link,
+      tw-passage p a,
+      .passage p a {
+        color: var(--twine-accent) !important;
+        text-decoration: underline !important;
+        text-decoration-color: var(--twine-accent-subtle) !important;
+        text-underline-offset: 3px !important;
+        font-weight: 600 !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 2px !important;
+        border-radius: 3px !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+      }
+
+      p tw-link:hover,
+      p a.link-internal:hover,
+      tw-passage p tw-link:hover,
+      tw-passage p a:hover {
+        color: var(--twine-accent-hover) !important;
+        text-decoration-color: var(--twine-accent) !important;
+        background: var(--twine-surface-hover) !important;
+      }
+
+      /* BOUTONS DE CHOIX EN BLOC (en fin de passage, liste de choix, boutons) */
+      tw-passage > tw-link,
+      tw-passage > a.link-internal,
+      tw-passage > tw-expression[name="link"],
+      tw-hook > tw-link,
+      .passage > a.link-internal,
+      .passage button,
+      tw-story tw-link[data-block-choice="true"],
+      tw-story a.link-internal[data-block-choice="true"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 9px !important;
+        margin: 10px 8px 10px 0 !important;
+        padding: 10px 22px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        font-family: var(--font-family) !important;
+        color: var(--twine-text) !important;
+        background: var(--twine-surface) !important;
+        border: 1px solid var(--twine-border) !important;
+        border-radius: 9999px !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      }
+
+      tw-passage > tw-link:hover,
+      tw-passage > a.link-internal:hover,
+      tw-passage > tw-expression[name="link"]:hover,
+      .passage > a.link-internal:hover,
+      .passage button:hover,
+      tw-story tw-link[data-block-choice="true"]:hover,
+      tw-story a.link-internal[data-block-choice="true"]:hover {
+        background: var(--twine-surface-hover) !important;
+        border-color: var(--twine-accent) !important;
+        color: var(--twine-text) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
+      }
+
+      tw-sidebar {
+        opacity: 0.65 !important;
+        transition: opacity 0.2s ease !important;
+      }
+      tw-sidebar:hover {
+        opacity: 1 !important;
+      }
+    `;
+
+    if (!existingStyle) {
+      existingStyle = iframeDoc.createElement('style');
+      existingStyle.id = 'antre-twine-style';
+      iframeDoc.head.appendChild(existingStyle);
+    }
+    existingStyle.textContent = css;
+
+    markBlockChoicesInTwine(iframeDoc);
+  } catch (err) {
+    console.warn('Erreur application DA Twine:', err);
+  }
+}
+
+async function openInteractiveFictionModal(writing) {
+  currentInteractiveWriting = writing;
+
+  const modal = document.getElementById('interactiveFictionModal');
+  const titleEl = document.getElementById('interactiveTitle');
+  const iframe = document.getElementById('interactiveFictionFrame');
+  const toggleDa = document.getElementById('toggleTwineDaTheme');
+  const toggleText = document.getElementById('twineStyleToggleText');
+  const dlTweeBtn = document.getElementById('interactiveDlTweeBtn');
+  const dlZipBtn = document.getElementById('interactiveDlZipBtn');
+  const dropdownMenu = document.getElementById('interactiveDownloadsList');
+
+  if (dropdownMenu) dropdownMenu.classList.remove('active');
+  if (titleEl) titleEl.textContent = writing.title;
+
+  if (dlTweeBtn) {
+    dlTweeBtn.style.display = (writing.tweeFileName || writing.tweeContent) ? 'flex' : 'none';
+  }
+  if (dlZipBtn) {
+    dlZipBtn.style.display = (writing.zipFileName || writing.zipBlob) ? 'flex' : 'none';
+  }
+
+  // Préférence du style DA mémorisée
+  const daEnabled = localStorage.getItem('caddrillage_twine_da_enabled') !== 'false';
+  if (toggleDa) toggleDa.checked = daEnabled;
+  if (toggleText) toggleText.textContent = daEnabled ? "Style de l'Antre" : "Style d'origine";
+
+  if (activeInteractiveBlobUrl) {
+    URL.revokeObjectURL(activeInteractiveBlobUrl);
+    activeInteractiveBlobUrl = null;
+  }
+
+  let htmlToLoad = writing.htmlContent || '';
+
+  if (!htmlToLoad && writing.pdfBlob) {
+    try {
+      const lower = (writing.pdfFileName || '').toLowerCase();
+      if (lower.endsWith('.zip')) {
+        const result = await processTwineZipFile(writing.pdfBlob);
+        htmlToLoad = result.htmlContent;
+        writing.htmlContent = htmlToLoad;
+      } else {
+        htmlToLoad = await writing.pdfBlob.text();
+        writing.htmlContent = htmlToLoad;
+      }
+    } catch (err) {
+      console.warn('Erreur lecture blob fiction interactive:', err);
+    }
+  }
+
+  if (iframe) {
+    iframe.onload = () => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!iframeDoc) return;
+
+        applyTwineDaStyle(iframeDoc, toggleDa ? toggleDa.checked : true);
+
+        const observer = new MutationObserver(() => {
+          if (toggleDa && toggleDa.checked) {
+            markBlockChoicesInTwine(iframeDoc);
+          }
+        });
+        observer.observe(iframeDoc.body, { childList: true, subtree: true });
+      } catch (e) {
+        console.warn('Origine iframe distincte ou sandbox restreint:', e);
+      }
+    };
+
+    if (htmlToLoad) {
+      const blob = new Blob([htmlToLoad], { type: 'text/html; charset=utf-8' });
+      activeInteractiveBlobUrl = URL.createObjectURL(blob);
+      iframe.src = activeInteractiveBlobUrl;
+    } else if (writing.pdfUrl) {
+      iframe.src = writing.pdfUrl;
+    } else {
+      showToast('Fichier de jeu introuvable pour cette fiction.', '⚠️');
+      return;
+    }
+  }
+
+  if (modal) modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeInteractiveFictionModal() {
+  const modal = document.getElementById('interactiveFictionModal');
+  const iframe = document.getElementById('interactiveFictionFrame');
+  const container = document.getElementById('interactiveFictionContainer');
+
+  if (iframe) iframe.src = 'about:blank';
+  if (modal) modal.classList.remove('active');
+  if (container) container.classList.remove('is-fullscreen');
+  document.body.style.overflow = '';
+
+  if (activeInteractiveBlobUrl) {
+    URL.revokeObjectURL(activeInteractiveBlobUrl);
+    activeInteractiveBlobUrl = null;
+  }
+}
+
+function downloadInteractiveFile(writing, type) {
+  let blob = null;
+  let filename = '';
+  let url = '';
+
+  const safeTitle = (writing.title || 'fiction').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  if (type === 'html') {
+    filename = writing.htmlFileName || `${safeTitle}.html`;
+    if (writing.htmlBlob) {
+      blob = writing.htmlBlob;
+    } else if (writing.htmlContent) {
+      blob = new Blob([writing.htmlContent], { type: 'text/html;charset=utf-8' });
+    } else if (writing.pdfBlob) {
+      blob = writing.pdfBlob;
+    } else if (writing.htmlUrl || writing.pdfUrl) {
+      url = writing.htmlUrl || writing.pdfUrl;
+    }
+  } else if (type === 'twee') {
+    filename = writing.tweeFileName || `${safeTitle}.twee`;
+    if (writing.tweeBlob) {
+      blob = writing.tweeBlob;
+    } else if (writing.tweeContent) {
+      blob = new Blob([writing.tweeContent], { type: 'text/plain;charset=utf-8' });
+    } else if (writing.tweeUrl) {
+      url = writing.tweeUrl;
+    }
+  } else if (type === 'zip') {
+    filename = writing.zipFileName || `${safeTitle}.zip`;
+    if (writing.zipBlob) {
+      blob = writing.zipBlob;
+    } else if (writing.zipUrl) {
+      url = writing.zipUrl;
+    }
+  }
+
+  if (blob) {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    showToast(`Téléchargement de "${filename}" lancé.`, '✨');
+  } else if (url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Téléchargement de "${filename}" lancé.`, '✨');
+  } else {
+    showToast(`Fichier ${type.toUpperCase()} introuvable pour cette fiction.`, '⚠️');
+  }
+}
+
+function initInteractiveFictionModal() {
+  const modal = document.getElementById('interactiveFictionModal');
+  const btnClose = document.getElementById('btnCloseInteractiveModal');
+  const btnFullscreen = document.getElementById('interactiveFullscreenBtn');
+  const container = document.getElementById('interactiveFictionContainer');
+  const toggleDa = document.getElementById('toggleTwineDaTheme');
+  const toggleText = document.getElementById('twineStyleToggleText');
+  const btnDownloads = document.getElementById('btnInteractiveDownloadsMenu');
+  const downloadsList = document.getElementById('interactiveDownloadsList');
+
+  const dlHtmlBtn = document.getElementById('interactiveDlHtmlBtn');
+  const dlTweeBtn = document.getElementById('interactiveDlTweeBtn');
+  const dlZipBtn = document.getElementById('interactiveDlZipBtn');
+
+  if (btnClose) btnClose.addEventListener('click', closeInteractiveFictionModal);
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target.id === 'interactiveFictionModal') closeInteractiveFictionModal();
+    });
+  }
+
+  if (btnFullscreen && container) {
+    btnFullscreen.addEventListener('click', () => {
+      container.classList.toggle('is-fullscreen');
+    });
+  }
+
+  if (btnDownloads && downloadsList) {
+    btnDownloads.addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadsList.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!btnDownloads.contains(e.target) && !downloadsList.contains(e.target)) {
+        downloadsList.classList.remove('active');
+      }
+    });
+  }
+
+  if (dlHtmlBtn) {
+    dlHtmlBtn.addEventListener('click', () => {
+      if (currentInteractiveWriting) downloadInteractiveFile(currentInteractiveWriting, 'html');
+      if (downloadsList) downloadsList.classList.remove('active');
+    });
+  }
+
+  if (dlTweeBtn) {
+    dlTweeBtn.addEventListener('click', () => {
+      if (currentInteractiveWriting) downloadInteractiveFile(currentInteractiveWriting, 'twee');
+      if (downloadsList) downloadsList.classList.remove('active');
+    });
+  }
+
+  if (dlZipBtn) {
+    dlZipBtn.addEventListener('click', () => {
+      if (currentInteractiveWriting) downloadInteractiveFile(currentInteractiveWriting, 'zip');
+      if (downloadsList) downloadsList.classList.remove('active');
+    });
+  }
+
+  if (toggleDa) {
+    toggleDa.addEventListener('change', () => {
+      const enabled = toggleDa.checked;
+      localStorage.setItem('caddrillage_twine_da_enabled', enabled ? 'true' : 'false');
+      if (toggleText) toggleText.textContent = enabled ? "Style de l'Antre" : "Style d'origine";
+
+      const iframe = document.getElementById('interactiveFictionFrame');
+      if (iframe) {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          applyTwineDaStyle(iframeDoc, enabled);
+        } catch (e) {
+          console.warn('Erreur bascule style DA Twine:', e);
+        }
+      }
+    });
+  }
+}
+
+// =========================================================
 // 7. PUBLICATION D'UN NOUVEL ÉCRIT (ESPACE PERSONNEL)
 // =========================================================
 function initPublishForm() {
@@ -3408,23 +4083,149 @@ function initPublishForm() {
 
   const catEl = document.getElementById('pubCategory');
   const summaryGroup = document.getElementById('pubSummaryGroup');
+  const summaryLabel = document.getElementById('pubSummaryLabel');
   const poetryGroup = document.getElementById('pubPoetryGroup');
   const metricsGroup = document.getElementById('pubMetricsGroup');
   const poetryTextArea = document.getElementById('pubPoetryText');
   const poetryBadge = document.getElementById('pubPoetryStatusBadge');
 
-  if (!form || !fileInput || !dropZone) return;
+  const pdfGroup = document.getElementById('pubPdfGroup');
+  const interactiveGroup = document.getElementById('pubInteractiveGroup');
+  const interactiveFileInput = document.getElementById('pubInteractiveFile');
+  const interactiveDropZone = document.getElementById('uploadInteractiveDropZone');
+  const interactiveStatusBox = document.getElementById('interactiveFileStatusBox');
+  const selectedInteractiveFileName = document.getElementById('selectedInteractiveFileName');
+  const selectedInteractiveFileSize = document.getElementById('selectedInteractiveFileSize');
+  const btnClearInteractiveFile = document.getElementById('btnClearInteractiveFile');
+  const tweeFileInput = document.getElementById('pubTweeFile');
+
+  const pageCountCol = document.getElementById('pubPageCountCol');
+  const wordCountLabel = document.getElementById('pubWordCountLabel');
+  const readingTimeLabel = document.getElementById('pubReadingTimeLabel');
+  const metricsGroupLabel = document.getElementById('pubMetricsGroupLabel');
+
+  let selectedInteractiveData = null;
+
+  if (!form) return;
 
   function updatePubCategoryVisibility() {
     const isPoetry = catEl && catEl.value === 'poesie';
+    const isInteractive = catEl && catEl.value === 'fiction-interactive';
+
     if (summaryGroup) summaryGroup.style.display = isPoetry ? 'none' : 'block';
+    if (summaryLabel) summaryLabel.textContent = isInteractive ? 'Synopsis / Note d\'intention *' : 'Résumé *';
     if (poetryGroup) poetryGroup.style.display = isPoetry ? 'block' : 'none';
     if (metricsGroup) metricsGroup.style.display = isPoetry ? 'none' : 'block';
 
+    if (pdfGroup) pdfGroup.style.display = isInteractive ? 'none' : 'block';
+    if (interactiveGroup) interactiveGroup.style.display = isInteractive ? 'block' : 'none';
+
+    if (fileInput) fileInput.required = (!isInteractive && !isPoetry);
+
+    if (pageCountCol) pageCountCol.style.display = isInteractive ? 'none' : 'block';
+    if (wordCountLabel) wordCountLabel.textContent = isInteractive ? 'Nombre de mots (total)' : 'Nombre de mots';
+    if (readingTimeLabel) readingTimeLabel.textContent = isInteractive ? 'Durée estimée d\'une partie' : 'Temps de lecture estimé';
+    if (metricsGroupLabel) metricsGroupLabel.textContent = isInteractive ? 'Détails de jeu & lecture (Mots, Durée estimée)' : 'Détails de lecture (Pages, Mots, Temps estimé)';
+
+    const hint = document.getElementById('pubMetricsStatusHint');
+    if (hint) {
+      if (isInteractive) {
+        hint.textContent = 'Renseignez manuellement le nombre de mots et la durée moyenne d\'une partie pour votre fiction interactive.';
+      } else {
+        hint.textContent = 'Calculé automatiquement dès la sélection du PDF. Vous pouvez modifier ou personnaliser ces valeurs à votre convenance.';
+      }
+    }
+
     // Si l'utilisateur bascule sur poésie alors qu'un PDF est déjà sélectionné
-    if (isPoetry && fileInput.files && fileInput.files[0] && poetryTextArea && !poetryTextArea.value.trim()) {
+    if (isPoetry && fileInput && fileInput.files && fileInput.files[0] && poetryTextArea && !poetryTextArea.value.trim()) {
       extractAndFillPoetry(fileInput.files[0]);
     }
+  }
+
+  async function handleInteractiveFile(file) {
+    if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.html') && !lower.endsWith('.htm') && !lower.endsWith('.zip')) {
+      showToast('Veuillez sélectionner un fichier Twine (.html) ou une archive (.zip).', '⚠️');
+      return;
+    }
+
+    if (selectedInteractiveFileName) selectedInteractiveFileName.textContent = file.name;
+    if (selectedInteractiveFileSize) selectedInteractiveFileSize.textContent = `Taille : ${formatFileSize(file.size)}`;
+    if (interactiveStatusBox) interactiveStatusBox.classList.add('active');
+
+    if (lower.endsWith('.zip')) {
+      try {
+        showToast('Décompression et traitement de l\'archive ZIP...', 'info');
+        const res = await processTwineZipFile(file);
+        selectedInteractiveData = {
+          htmlContent: res.htmlContent,
+          htmlFileName: res.htmlFilename,
+          htmlFileSize: formatFileSize(file.size),
+          zipBlob: file,
+          zipFileName: file.name,
+          zipFileSize: formatFileSize(file.size),
+          primaryFile: file
+        };
+        showToast(`Projet ZIP décompressé (${res.htmlFilename}). Images prêtes !`, '✨');
+      } catch (err) {
+        console.error('Erreur zip Twine:', err);
+        showToast(`Erreur ZIP : ${err.message}`, 'error');
+      }
+    } else {
+      try {
+        const text = await file.text();
+        selectedInteractiveData = {
+          htmlContent: text,
+          htmlFileName: file.name,
+          htmlFileSize: formatFileSize(file.size),
+          htmlBlob: file,
+          primaryFile: file
+        };
+        showToast(`Fichier Twine "${file.name}" chargé avec succès.`, '✨');
+      } catch (err) {
+        console.error('Erreur lecture HTML:', err);
+        showToast('Impossible de lire le fichier HTML.', 'error');
+      }
+    }
+  }
+
+  if (interactiveDropZone && interactiveFileInput) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      interactiveDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        interactiveDropZone.classList.add('drag-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      interactiveDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        interactiveDropZone.classList.remove('drag-over');
+      });
+    });
+
+    interactiveDropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        interactiveFileInput.files = e.dataTransfer.files;
+        handleInteractiveFile(file);
+      }
+    });
+
+    interactiveFileInput.addEventListener('change', () => {
+      if (interactiveFileInput.files && interactiveFileInput.files[0]) {
+        handleInteractiveFile(interactiveFileInput.files[0]);
+      }
+    });
+  }
+
+  if (btnClearInteractiveFile) {
+    btnClearInteractiveFile.addEventListener('click', () => {
+      if (interactiveFileInput) interactiveFileInput.value = '';
+      if (interactiveStatusBox) interactiveStatusBox.classList.remove('active');
+      selectedInteractiveData = null;
+    });
   }
 
   async function extractAndFillPoetry(file) {
@@ -3462,37 +4263,39 @@ function initPublishForm() {
     updatePubCategoryVisibility();
   }
 
-  ['dragenter', 'dragover'].forEach(eventName => {
-    dropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      dropZone.classList.add('drag-over');
+  if (dropZone && fileInput) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+      });
     });
-  });
 
-  ['dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+      });
     });
-  });
 
-  dropZone.addEventListener('drop', (e) => {
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        fileInput.files = e.dataTransfer.files;
-        updateSelectedFileInfo(file);
-      } else {
-        showToast('Veuillez sélectionner un fichier au format PDF.');
+    dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+          fileInput.files = e.dataTransfer.files;
+          updateSelectedFileInfo(file);
+        } else {
+          showToast('Veuillez sélectionner un fichier au format PDF.');
+        }
       }
-    }
-  });
+    });
 
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files && fileInput.files[0]) {
-      updateSelectedFileInfo(fileInput.files[0]);
-    }
-  });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files[0]) {
+        updateSelectedFileInfo(fileInput.files[0]);
+      }
+    });
+  }
 
   async function updateSelectedFileInfo(file) {
     if (fileNameText) fileNameText.textContent = file.name;
@@ -3529,7 +4332,7 @@ function initPublishForm() {
 
   if (clearFileBtn) {
     clearFileBtn.addEventListener('click', () => {
-      fileInput.value = '';
+      if (fileInput) fileInput.value = '';
       if (statusBox) statusBox.classList.remove('active');
       const pageInput = document.getElementById('pubPageCount');
       const wordInput = document.getElementById('pubWordCount');
@@ -3562,14 +4365,20 @@ function initPublishForm() {
     const title = titleEl ? titleEl.value.trim() : '';
     const category = catEl ? catEl.value : 'nouvelle';
     const isPoetry = category === 'poesie';
+    const isInteractive = category === 'fiction-interactive';
     const summary = sumEl ? sumEl.value.trim() : '';
     const poetryText = isPoetry && poetryTextArea ? poetryTextArea.value.trim() : '';
     const rawTags = tagsEl ? tagsEl.value : '';
     const customDate = displayDateEl ? displayDateEl.value.trim() : '';
     const displayDate = customDate || formatDisplayDate(Date.now());
-    const file = fileInput.files[0];
+    const file = fileInput ? fileInput.files[0] : null;
 
-    if (!file) {
+    if (isInteractive && !selectedInteractiveData) {
+      showToast('Veuillez sélectionner le fichier de votre jeu (.html ou .zip).', '⚠️');
+      return;
+    }
+
+    if (!isInteractive && !file) {
       showToast('Veuillez sélectionner un fichier PDF.');
       return;
     }
@@ -3584,7 +4393,7 @@ function initPublishForm() {
       return;
     }
 
-    let pageCount = (!isPoetry && pageInput && pageInput.value) ? parseInt(pageInput.value, 10) : null;
+    let pageCount = (!isPoetry && !isInteractive && pageInput && pageInput.value) ? parseInt(pageInput.value, 10) : null;
     let wordCount = (!isPoetry && wordInput && wordInput.value) ? parseInt(wordInput.value, 10) : null;
     let readingTime = (!isPoetry && timeInput) ? timeInput.value.trim() : '';
 
@@ -3592,8 +4401,8 @@ function initPublishForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = 'Publication en cours...';
 
-    // Pour la prose : si les champs sont vides, tenter l'analyse automatique avant sauvegarde
-    if (!isPoetry && (!pageCount || !wordCount || !readingTime)) {
+    // Pour la prose PDF : si les champs sont vides, tenter l'analyse automatique avant sauvegarde
+    if (!isPoetry && !isInteractive && (!pageCount || !wordCount || !readingTime) && file) {
       try {
         const stats = await analyzePdfFile(file);
         if (stats) {
@@ -3603,6 +4412,23 @@ function initPublishForm() {
         }
       } catch (err) {
         console.warn('Erreur fallback calcul stats submit:', err);
+      }
+    }
+
+    // Traitement du fichier TWEE optionnel
+    let tweeData = null;
+    if (isInteractive && tweeFileInput && tweeFileInput.files && tweeFileInput.files[0]) {
+      const tweeFile = tweeFileInput.files[0];
+      try {
+        const tweeText = await tweeFile.text();
+        tweeData = {
+          tweeContent: tweeText,
+          tweeFileName: tweeFile.name,
+          tweeFileSize: formatFileSize(tweeFile.size),
+          tweeBlob: tweeFile
+        };
+      } catch (err) {
+        console.warn('Erreur lecture twee submit:', err);
       }
     }
 
@@ -3617,20 +4443,32 @@ function initPublishForm() {
       poetryText: isPoetry ? poetryText : '',
       tags,
       displayDate,
-      pageCount: isPoetry ? null : pageCount,
+      pageCount: (isPoetry || isInteractive) ? null : pageCount,
       wordCount: isPoetry ? null : wordCount,
       readingTime: isPoetry ? '' : readingTime,
-      pdfBlob: file,
-      pdfFileName: file.name,
-      pdfFileSize: formatFileSize(file.size),
+      pdfBlob: isInteractive ? (selectedInteractiveData.primaryFile || null) : file,
+      pdfFileName: isInteractive ? (selectedInteractiveData.htmlFileName || selectedInteractiveData.zipFileName || 'interactive.html') : file.name,
+      pdfFileSize: isInteractive ? (selectedInteractiveData.htmlFileSize || selectedInteractiveData.zipFileSize || '0 Ko') : formatFileSize(file.size),
+      htmlContent: isInteractive ? (selectedInteractiveData.htmlContent || '') : '',
+      htmlFileName: isInteractive ? (selectedInteractiveData.htmlFileName || '') : '',
+      zipBlob: isInteractive ? (selectedInteractiveData.zipBlob || null) : null,
+      zipFileName: isInteractive ? (selectedInteractiveData.zipFileName || '') : '',
+      zipFileSize: isInteractive ? (selectedInteractiveData.zipFileSize || '') : '',
+      tweeContent: (isInteractive && tweeData) ? tweeData.tweeContent : '',
+      tweeFileName: (isInteractive && tweeData) ? tweeData.tweeFileName : '',
+      tweeFileSize: (isInteractive && tweeData) ? tweeData.tweeFileSize : '',
+      tweeBlob: (isInteractive && tweeData) ? tweeData.tweeBlob : null,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
 
     try {
-      await dbSaveWriting(writing, file);
+      const primaryFile = isInteractive ? selectedInteractiveData.primaryFile : file;
+      await dbSaveWriting(writing, primaryFile);
       form.reset();
+      selectedInteractiveData = null;
       if (statusBox) statusBox.classList.remove('active');
+      if (interactiveStatusBox) interactiveStatusBox.classList.remove('active');
       const hint = document.getElementById('pubMetricsStatusHint');
       if (hint) hint.textContent = 'Calculé automatiquement dès la sélection du PDF. Vous pouvez modifier ou personnaliser ces valeurs à votre convenance.';
       if (poetryTextArea) poetryTextArea.value = '';
@@ -3639,12 +4477,12 @@ function initPublishForm() {
         poetryBadge.style.color = '';
       }
       updatePubCategoryVisibility();
-      showToast(`"${writing.title}" a été ajouté à la vitrine !`);
+      showToast(`"${writing.title}" a été ajouté à la vitrine !`, '✨');
       await refreshAdminWritings();
       await refreshShowcase();
     } catch (err) {
       console.error('Erreur lors de la publication :', err);
-      showToast('Une erreur est survenue lors de l’enregistrement.');
+      showToast('Une erreur est survenue lors de l’enregistrement.', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalBtnText;
@@ -3996,10 +4834,7 @@ window.openEditModal = async function(id) {
     const editTitle = document.getElementById('editTitle');
     const editCategory = document.getElementById('editCategory');
     const editSummary = document.getElementById('editSummary');
-    const editSummaryGroup = document.getElementById('editSummaryGroup');
-    const editPoetryGroup = document.getElementById('editPoetryGroup');
     const editPoetryText = document.getElementById('editPoetryText');
-    const editMetricsGroup = document.getElementById('editMetricsGroup');
     const editTags = document.getElementById('editTags');
     const editCurrentPdfInfo = document.getElementById('editCurrentPdfInfo');
 
@@ -4010,9 +4845,43 @@ window.openEditModal = async function(id) {
     if (editTags) editTags.value = (writing.tags || []).join(', ');
 
     const isPoetry = writing.category === 'poesie';
+    const isInteractive = writing.category === 'fiction-interactive';
+
+    const editSummaryGroup = document.getElementById('editSummaryGroup');
+    const editSummaryLabel = document.getElementById('editSummaryLabel');
+    const editPoetryGroup = document.getElementById('editPoetryGroup');
+    const editMetricsGroup = document.getElementById('editMetricsGroup');
+    const editMetricsGroupLabel = document.getElementById('editMetricsGroupLabel');
+    const editPageCountCol = document.getElementById('editPageCountCol');
+    const editWordCountLabel = document.getElementById('editWordCountLabel');
+    const editReadingTimeLabel = document.getElementById('editReadingTimeLabel');
+
+    const editPdfGroup = document.getElementById('editPdfGroup');
+    const editInteractiveGroup = document.getElementById('editInteractiveGroup');
+    const editCurrentInteractiveInfo = document.getElementById('editCurrentInteractiveInfo');
+    const editCurrentTweeInfo = document.getElementById('editCurrentTweeInfo');
+
     if (editSummaryGroup) editSummaryGroup.style.display = isPoetry ? 'none' : 'block';
+    if (editSummaryLabel) editSummaryLabel.textContent = isInteractive ? 'Synopsis / Note d\'intention *' : 'Résumé *';
     if (editPoetryGroup) editPoetryGroup.style.display = isPoetry ? 'block' : 'none';
     if (editMetricsGroup) editMetricsGroup.style.display = isPoetry ? 'none' : 'block';
+
+    if (editPdfGroup) editPdfGroup.style.display = isInteractive ? 'none' : 'block';
+    if (editInteractiveGroup) editInteractiveGroup.style.display = isInteractive ? 'block' : 'none';
+
+    if (editPageCountCol) editPageCountCol.style.display = isInteractive ? 'none' : 'block';
+    if (editWordCountLabel) editWordCountLabel.textContent = isInteractive ? 'Nombre de mots (total)' : 'Nombre de mots';
+    if (editReadingTimeLabel) editReadingTimeLabel.textContent = isInteractive ? 'Durée estimée d\'une partie' : 'Temps de lecture estimé';
+    if (editMetricsGroupLabel) editMetricsGroupLabel.textContent = isInteractive ? 'Détails de jeu & lecture (Mots, Durée estimée)' : 'Détails de lecture (Pages, Mots, Temps estimé)';
+
+    if (editCurrentInteractiveInfo) {
+      editCurrentInteractiveInfo.textContent = `Jeu actuel conservé : ${writing.htmlFileName || writing.zipFileName || 'Fichier de jeu interactif'}`;
+    }
+    if (editCurrentTweeInfo) {
+      editCurrentTweeInfo.textContent = writing.tweeFileName
+        ? `Code source conservé : ${writing.tweeFileName}`
+        : 'Laissez vide pour conserver le code source existant (optionnel).';
+    }
 
     if (editPoetryText) {
       editPoetryText.value = writing.poetryText || (isPoetry ? writing.summary : '') || '';
@@ -4033,7 +4902,9 @@ window.openEditModal = async function(id) {
 
     const editHint = document.getElementById('editMetricsStatusHint');
     if (editHint) {
-      editHint.textContent = 'Modifiable à tout moment. Si un nouveau PDF est chargé, ces valeurs sont recalculées automatiquement.';
+      editHint.textContent = isInteractive
+        ? 'Renseignez manuellement le nombre de mots et la durée moyenne d\'une partie pour votre fiction interactive.'
+        : 'Modifiable à tout moment. Si un nouveau PDF est chargé, ces valeurs sont recalculées automatiquement.';
     }
 
     if (editCurrentPdfInfo) {
@@ -4045,6 +4916,13 @@ window.openEditModal = async function(id) {
     const editStatusBox = document.getElementById('editFileStatusBox');
     if (editFileInput) editFileInput.value = '';
     if (editStatusBox) editStatusBox.classList.remove('active');
+
+    const editInteractiveFile = document.getElementById('editInteractiveFile');
+    const editInteractiveStatusBox = document.getElementById('editInteractiveFileStatusBox');
+    const editTweeFile = document.getElementById('editTweeFile');
+    if (editInteractiveFile) editInteractiveFile.value = '';
+    if (editInteractiveStatusBox) editInteractiveStatusBox.classList.remove('active');
+    if (editTweeFile) editTweeFile.value = '';
 
     const modal = document.getElementById('editModal');
     if (modal) modal.classList.add('active');
@@ -4064,17 +4942,45 @@ function initEditForm() {
 
   const editCategory = document.getElementById('editCategory');
   const editSummaryGroup = document.getElementById('editSummaryGroup');
+  const editSummaryLabel = document.getElementById('editSummaryLabel');
   const editPoetryGroup = document.getElementById('editPoetryGroup');
   const editPoetryText = document.getElementById('editPoetryText');
   const editMetricsGroup = document.getElementById('editMetricsGroup');
+  const editMetricsGroupLabel = document.getElementById('editMetricsGroupLabel');
+  const editPageCountCol = document.getElementById('editPageCountCol');
+  const editWordCountLabel = document.getElementById('editWordCountLabel');
+  const editReadingTimeLabel = document.getElementById('editReadingTimeLabel');
 
-  if (!form || !editFileInput || !editDropZone) return;
+  const editPdfGroup = document.getElementById('editPdfGroup');
+  const editInteractiveGroup = document.getElementById('editInteractiveGroup');
+  const editInteractiveFile = document.getElementById('editInteractiveFile');
+  const editInteractiveDropZone = document.getElementById('editUploadInteractiveDropZone');
+  const editInteractiveStatusBox = document.getElementById('editInteractiveFileStatusBox');
+  const editSelectedInteractiveFileName = document.getElementById('editSelectedInteractiveFileName');
+  const editSelectedInteractiveFileSize = document.getElementById('editSelectedInteractiveFileSize');
+  const btnCancelEditInteractive = document.getElementById('btnCancelEditInteractive');
+  const editTweeFile = document.getElementById('editTweeFile');
+
+  let newInteractiveData = null;
+
+  if (!form) return;
 
   function updateEditCategoryVisibility() {
     const isPoetry = editCategory && editCategory.value === 'poesie';
+    const isInteractive = editCategory && editCategory.value === 'fiction-interactive';
+
     if (editSummaryGroup) editSummaryGroup.style.display = isPoetry ? 'none' : 'block';
+    if (editSummaryLabel) editSummaryLabel.textContent = isInteractive ? 'Synopsis / Note d\'intention *' : 'Résumé *';
     if (editPoetryGroup) editPoetryGroup.style.display = isPoetry ? 'block' : 'none';
     if (editMetricsGroup) editMetricsGroup.style.display = isPoetry ? 'none' : 'block';
+
+    if (editPdfGroup) editPdfGroup.style.display = isInteractive ? 'none' : 'block';
+    if (editInteractiveGroup) editInteractiveGroup.style.display = isInteractive ? 'block' : 'none';
+
+    if (editPageCountCol) editPageCountCol.style.display = isInteractive ? 'none' : 'block';
+    if (editWordCountLabel) editWordCountLabel.textContent = isInteractive ? 'Nombre de mots (total)' : 'Nombre de mots';
+    if (editReadingTimeLabel) editReadingTimeLabel.textContent = isInteractive ? 'Durée estimée d\'une partie' : 'Temps de lecture estimé';
+    if (editMetricsGroupLabel) editMetricsGroupLabel.textContent = isInteractive ? 'Détails de jeu & lecture (Mots, Durée estimée)' : 'Détails de lecture (Pages, Mots, Temps estimé)';
 
     if (isPoetry && editPoetryText && !editPoetryText.value.trim()) {
       const editSummary = document.getElementById('editSummary');
@@ -4088,19 +4994,124 @@ function initEditForm() {
     editCategory.addEventListener('change', updateEditCategoryVisibility);
   }
 
-  ['dragenter', 'dragover'].forEach(eventName => {
-    editDropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      editDropZone.classList.add('drag-over');
-    });
-  });
+  // Support dropzone pour fiction interactive dans Edit
+  async function handleEditInteractiveFileSelected(file) {
+    if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.html') && !lower.endsWith('.htm') && !lower.endsWith('.zip')) {
+      showToast('Veuillez sélectionner un fichier Twine (.html) ou archive (.zip).', '⚠️');
+      return;
+    }
 
-  ['dragleave', 'drop'].forEach(eventName => {
-    editDropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      editDropZone.classList.remove('drag-over');
+    if (editSelectedInteractiveFileName) editSelectedInteractiveFileName.textContent = file.name;
+    if (editSelectedInteractiveFileSize) editSelectedInteractiveFileSize.textContent = `Taille : ${formatFileSize(file.size)}`;
+    if (editInteractiveStatusBox) editInteractiveStatusBox.classList.add('active');
+
+    if (lower.endsWith('.zip')) {
+      try {
+        showToast('Décompression de la nouvelle archive...', 'info');
+        const res = await processTwineZipFile(file);
+        newInteractiveData = {
+          htmlContent: res.htmlContent,
+          htmlFileName: res.htmlFilename,
+          zipBlob: file,
+          zipFileName: file.name,
+          zipFileSize: formatFileSize(file.size),
+          primaryFile: file
+        };
+        showToast(`Archive prête (${res.htmlFilename}).`, '✨');
+      } catch (err) {
+        console.error('Erreur zip edit:', err);
+        showToast(`Erreur ZIP : ${err.message}`, 'error');
+      }
+    } else {
+      try {
+        const text = await file.text();
+        newInteractiveData = {
+          htmlContent: text,
+          htmlFileName: file.name,
+          htmlFileSize: formatFileSize(file.size),
+          htmlBlob: file,
+          primaryFile: file
+        };
+        showToast(`Nouveau fichier Twine "${file.name}" sélectionné.`, '✨');
+      } catch (err) {
+        console.error('Erreur lecture HTML edit:', err);
+      }
+    }
+  }
+
+  if (editInteractiveDropZone && editInteractiveFile) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      editInteractiveDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        editInteractiveDropZone.classList.add('drag-over');
+      });
     });
-  });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      editInteractiveDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        editInteractiveDropZone.classList.remove('drag-over');
+      });
+    });
+
+    editInteractiveDropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        editInteractiveFile.files = e.dataTransfer.files;
+        handleEditInteractiveFileSelected(file);
+      }
+    });
+
+    editInteractiveFile.addEventListener('change', () => {
+      if (editInteractiveFile.files && editInteractiveFile.files[0]) {
+        handleEditInteractiveFileSelected(editInteractiveFile.files[0]);
+      }
+    });
+  }
+
+  if (btnCancelEditInteractive) {
+    btnCancelEditInteractive.addEventListener('click', () => {
+      if (editInteractiveFile) editInteractiveFile.value = '';
+      if (editInteractiveStatusBox) editInteractiveStatusBox.classList.remove('active');
+      newInteractiveData = null;
+    });
+  }
+
+  if (editDropZone && editFileInput) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      editDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        editDropZone.classList.add('drag-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      editDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        editDropZone.classList.remove('drag-over');
+      });
+    });
+
+    editDropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+          editFileInput.files = e.dataTransfer.files;
+          handleEditFileSelected(file);
+        } else {
+          showToast('Veuillez sélectionner un fichier au format PDF.');
+        }
+      }
+    });
+
+    editFileInput.addEventListener('change', () => {
+      if (editFileInput.files && editFileInput.files[0]) {
+        handleEditFileSelected(editFileInput.files[0]);
+      }
+    });
+  }
 
   async function handleEditFileSelected(file) {
     if (editFileName) editFileName.textContent = file.name;
@@ -4216,10 +5227,21 @@ function initEditForm() {
     currentEditingWriting.tags = tags;
     currentEditingWriting.displayDate = customDate || currentEditingWriting.displayDate || formatDisplayDate(currentEditingWriting.createdAt);
 
-    if (isPoetry) {
+    const isInteractive = category === 'fiction-interactive';
+
+    if (isPoetry || isInteractive) {
       currentEditingWriting.pageCount = null;
-      currentEditingWriting.wordCount = null;
-      currentEditingWriting.readingTime = '';
+      if (isPoetry) {
+        currentEditingWriting.wordCount = null;
+        currentEditingWriting.readingTime = '';
+      } else {
+        if (editWordInput && editWordInput.value !== '') {
+          currentEditingWriting.wordCount = parseInt(editWordInput.value, 10);
+        }
+        if (editReadingTimeInput) {
+          currentEditingWriting.readingTime = editReadingTimeInput.value.trim();
+        }
+      }
     } else {
       if (editPageInput && editPageInput.value !== '') {
         currentEditingWriting.pageCount = parseInt(editPageInput.value, 10);
@@ -4235,10 +5257,35 @@ function initEditForm() {
     currentEditingWriting.updatedAt = Date.now();
 
     let newFile = null;
-    if (editFileInput.files && editFileInput.files[0]) {
+    if (isInteractive && newInteractiveData) {
+      newFile = newInteractiveData.primaryFile;
+      currentEditingWriting.htmlContent = newInteractiveData.htmlContent || '';
+      currentEditingWriting.htmlFileName = newInteractiveData.htmlFileName || '';
+      if (newInteractiveData.zipBlob) {
+        currentEditingWriting.zipBlob = newInteractiveData.zipBlob;
+        currentEditingWriting.zipFileName = newInteractiveData.zipFileName;
+        currentEditingWriting.zipFileSize = newInteractiveData.zipFileSize;
+      }
+      currentEditingWriting.pdfFileName = newInteractiveData.htmlFileName || newInteractiveData.zipFileName || 'interactive.html';
+      currentEditingWriting.pdfFileSize = newInteractiveData.htmlFileSize || newInteractiveData.zipFileSize || '0 Ko';
+    } else if (!isInteractive && editFileInput.files && editFileInput.files[0]) {
       newFile = editFileInput.files[0];
       currentEditingWriting.pdfFileName = newFile.name;
       currentEditingWriting.pdfFileSize = formatFileSize(newFile.size);
+    }
+
+    // Traitement du remplacement TWEE dans Edit
+    if (isInteractive && editTweeFile && editTweeFile.files && editTweeFile.files[0]) {
+      const tweeFile = editTweeFile.files[0];
+      try {
+        const tweeText = await tweeFile.text();
+        currentEditingWriting.tweeContent = tweeText;
+        currentEditingWriting.tweeFileName = tweeFile.name;
+        currentEditingWriting.tweeFileSize = formatFileSize(tweeFile.size);
+        currentEditingWriting.tweeBlob = tweeFile;
+      } catch (err) {
+        console.warn('Erreur lecture twee edit:', err);
+      }
     }
 
     try {
@@ -6318,6 +7365,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Attacher TOUS les écouteurs de formulaires et modales immédiatement
   initPublishForm();
   initEditForm();
+  initInteractiveFictionModal();
   initDeleteModal();
   initCommentModal();
   initSearchShowcase();

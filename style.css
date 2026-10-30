@@ -2725,6 +2725,199 @@ body.theme-galaxy .poetry-fade-overlay {
 }
 
 /* =========================================================
+   FICTION INTERACTIVE (TWINE) & LECTEUR IMMERSIF DÉDIÉ
+   ========================================================= */
+
+/* Badge catégorie fiction interactive */
+.card-category-badge.badge-interactive {
+  background: rgba(180, 140, 75, 0.16);
+  color: var(--accent);
+  border: 1px solid rgba(180, 140, 75, 0.4);
+}
+
+body.theme-sombre .card-category-badge.badge-interactive,
+body.theme-noel .card-category-badge.badge-interactive {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+/* Stat pill pour embranchements multiples */
+.stat-pill.stat-pill-branching {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Bouton principal de lancement du jeu */
+.btn-play-interactive {
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+  border-color: var(--accent) !important;
+  font-weight: 700 !important;
+  gap: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.btn-play-interactive:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* Zone d'upload interactive */
+.interactive-upload-box {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+/* Modal Lecteur de Fiction Interactive */
+.modal-container.interactive-fiction-modal {
+  max-width: 1200px;
+  width: 96vw;
+  height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-strong);
+  transition: all 0.25s ease;
+}
+
+.modal-container.interactive-fiction-modal.is-fullscreen {
+  max-width: 100vw;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+}
+
+.interactive-fiction-header {
+  background: var(--reader-header-bg);
+  padding: 12px 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.interactive-header-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.interactive-header-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--badge-bg);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.interactive-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.interactive-style-toggle {
+  padding: 5px 12px;
+  font-size: 0.84rem;
+}
+
+/* Dropdown des téléchargements dans le lecteur */
+.interactive-downloads-dropdown {
+  position: relative;
+}
+
+.interactive-downloads-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1000;
+  min-width: 240px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.interactive-downloads-menu.active {
+  display: flex;
+}
+
+.interactive-dl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.interactive-dl-item:hover {
+  background: var(--surface-hover);
+  color: var(--accent);
+}
+
+.interactive-frame-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--bg);
+}
+
+.interactive-fiction-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .modal-container.interactive-fiction-modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .interactive-fiction-header {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .interactive-style-toggle .reading-toggle-text {
+    display: none;
+  }
+}
+
+/* =========================================================
    NOTIFICATIONS TOAST
    ========================================================= */
 
