@@ -5,5 +5,6 @@
   "showAppDownloadBtn": true,
   "customThemes": null,
   "customBuilds": null,
-  "updatedAt": 1793368000000
+  "updatedAt": 1793368000000,
+  "siteDisabled": false
 }

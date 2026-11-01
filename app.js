@@ -62,6 +62,11 @@ if (localStorage.getItem('caddrillage_show_app_download_btn') === 'false') {
   document.body.classList.add('hide-app-download-btn');
 }
 
+// Prévention immédiate du clignotement si le site est désactivé
+if (localStorage.getItem('caddrillage_site_disabled') === 'true' && localStorage.getItem('caddrillage_logged_in') !== 'true') {
+  document.body.classList.add('site-disabled-mode');
+}
+
 // État de la recherche vitrine & espace personnel
 let isSearchPanelOpen = false;
 let showcaseSearchQuery = '';
@@ -2150,6 +2155,7 @@ function handleLoginSubmit(e) {
   if (userVal === AUTH_CONFIG.username && passVal === AUTH_CONFIG.password) {
     localStorage.setItem('caddrillage_logged_in', 'true');
     checkAuthStatus();
+    if (typeof updateSiteDisabledState === 'function') updateSiteDisabledState();
     closeLoginModal();
     showToast('Connexion réussie. Bienvenue dans votre antre !');
     switchToPersonalSpace();
@@ -2161,6 +2167,7 @@ function handleLoginSubmit(e) {
 function handleLogout() {
   localStorage.removeItem('caddrillage_logged_in');
   checkAuthStatus();
+  if (typeof updateSiteDisabledState === 'function') updateSiteDisabledState();
   switchToShowcase();
   showToast('Déconnexion effectuée.');
 }
@@ -2174,6 +2181,7 @@ function switchToPersonalSpace() {
     psView.setAttribute('aria-hidden', 'false');
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (typeof updateSiteDisabledState === 'function') updateSiteDisabledState();
   refreshAdminWritings();
   refreshAdminComments();
   applySiteIdentity();
@@ -2192,6 +2200,7 @@ function switchToShowcase() {
   }
   if (scView) scView.style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (typeof updateSiteDisabledState === 'function') updateSiteDisabledState();
   refreshShowcase();
 }
 
@@ -2710,6 +2719,13 @@ async function refreshShowcase() {
   const heading = document.getElementById('currentCategoryHeading');
   const readingToggle = document.getElementById('readingTimeToggle');
   if (!writingsContainer) return;
+
+  const isAuth = localStorage.getItem('caddrillage_logged_in') === 'true';
+  const disabled = (typeof isSiteDisabled === 'function') ? isSiteDisabled() : (localStorage.getItem('caddrillage_site_disabled') === 'true');
+  if (disabled && !isAuth) {
+    writingsContainer.innerHTML = '';
+    return;
+  }
 
   try {
     const writings = await dbGetAllWritings();
@@ -6025,6 +6041,7 @@ function getAllCurrentSiteSettings() {
   } catch (e) {}
 
   const updatedAt = Number(localStorage.getItem('caddrillage_settings_updated_at')) || Date.now();
+  const siteDisabled = localStorage.getItem('caddrillage_site_disabled') === 'true';
 
   return {
     siteTitle: getSiteTitle(),
@@ -6033,6 +6050,7 @@ function getAllCurrentSiteSettings() {
     showAppDownloadBtn: isAppDownloadBtnVisible(),
     customThemes: customThemes,
     customBuilds: customBuilds,
+    siteDisabled: siteDisabled,
     updatedAt: updatedAt
   };
 }
@@ -6052,6 +6070,9 @@ function applyAllSiteSettings(settings, saveToLocal = true) {
     }
     if (settings.showAppDownloadBtn !== undefined && settings.showAppDownloadBtn !== null) {
       localStorage.setItem(APP_DOWNLOAD_BTN_STORAGE_KEY, settings.showAppDownloadBtn ? 'true' : 'false');
+    }
+    if (settings.siteDisabled !== undefined && settings.siteDisabled !== null) {
+      localStorage.setItem('caddrillage_site_disabled', settings.siteDisabled ? 'true' : 'false');
     }
     if (settings.customThemes !== undefined) {
       if (settings.customThemes && typeof settings.customThemes === 'object') {
@@ -6080,6 +6101,11 @@ function applyAllSiteSettings(settings, saveToLocal = true) {
 
   // Mise à jour de l'affichage du bouton de téléchargement de l'app
   setAppDownloadBtnVisibility(isAppDownloadBtnVisible(), false);
+
+  // Mise à jour de l'état d'activation public du site
+  if (typeof updateSiteDisabledState === 'function') {
+    updateSiteDisabledState(Boolean(settings.siteDisabled));
+  }
 
   // Mise à jour dynamique des thèmes
   applyThemesMetadata();
@@ -6207,6 +6233,155 @@ async function fetchSiteSettingsFromSupabase() {
     console.warn('fetchSiteSettingsFromSupabase :', err);
   }
   return null;
+}
+
+// =========================================================
+// CONTRÔLE D'ÉTAT PUBLIC DU SITE (EN LIGNE / DÉSACTIVÉ)
+// =========================================================
+const SITE_DISABLED_STORAGE_KEY = 'caddrillage_site_disabled';
+
+function isSiteDisabled() {
+  return localStorage.getItem(SITE_DISABLED_STORAGE_KEY) === 'true';
+}
+
+function updateSiteDisabledState(disabled = isSiteDisabled()) {
+  const isAuth = localStorage.getItem('caddrillage_logged_in') === 'true';
+  const shouldHideVitrine = Boolean(disabled) && !isAuth;
+
+  document.body.classList.toggle('site-disabled-mode', shouldHideVitrine);
+
+  // Bannière dans l'espace personnel
+  const adminBanner = document.getElementById('siteDisabledAdminBanner');
+  if (adminBanner) {
+    adminBanner.style.display = (disabled && isAuth) ? 'flex' : 'none';
+  }
+
+  // Bannière dans la vitrine quand l'auteur connecté visualise son site désactivé
+  const vitrineBanner = document.getElementById('siteDisabledVitrineBanner');
+  if (vitrineBanner) {
+    vitrineBanner.style.display = (disabled && isAuth) ? 'flex' : 'none';
+  }
+
+  // Mise à jour de la carte de contrôle tout en bas de l'espace personnel
+  const badge = document.getElementById('siteStatusBadge');
+  const desc = document.getElementById('siteStatusDesc');
+  const btnToggle = document.getElementById('btnToggleSiteStatus');
+  const btnLabel = document.getElementById('btnToggleSiteStatusLabel');
+  const checkbox = document.getElementById('toggleSiteStatusCheckbox');
+  const switchText = document.getElementById('siteStatusSwitchText');
+  const card = document.getElementById('siteStatusControlCard');
+  const icon = document.getElementById('siteStatusIcon');
+  const btnIcon = document.getElementById('btnToggleSiteStatusIcon');
+
+  if (checkbox) {
+    checkbox.checked = !disabled; // Coché = En ligne, Décoché = Désactivé
+  }
+
+  if (switchText) {
+    switchText.textContent = disabled ? 'Désactivé' : 'En ligne';
+  }
+
+  if (badge) {
+    badge.textContent = disabled ? 'Désactivé' : 'En ligne';
+    badge.className = `site-status-badge ${disabled ? 'is-disabled' : 'is-online'}`;
+  }
+
+  if (desc) {
+    desc.textContent = disabled
+      ? "Le site est actuellement désactivé. La vitrine est totalement masquée pour tous les visiteurs : seul le bouton d'accès à l'espace personnel reste affiché."
+      : "Le site est actuellement public. Tous vos visiteurs peuvent explorer la vitrine et lire vos écrits.";
+  }
+
+  if (btnLabel) {
+    btnLabel.textContent = disabled ? 'Réactiver le site' : 'Désactiver le site';
+  }
+
+  if (btnToggle) {
+    btnToggle.title = disabled
+      ? "Rendre le site à nouveau public pour tous les visiteurs"
+      : "Masquer la vitrine et désactiver le site pour le public";
+    btnToggle.setAttribute('aria-pressed', disabled ? 'true' : 'false');
+  }
+
+  if (card) {
+    card.classList.toggle('is-disabled-mode', disabled);
+    card.classList.toggle('is-online-mode', !disabled);
+  }
+
+  if (icon) {
+    icon.innerHTML = disabled
+      ? `<circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>`
+      : `<circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>`;
+  }
+
+  if (btnIcon) {
+    btnIcon.innerHTML = disabled
+      ? `<path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path>`
+      : `<path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line>`;
+  }
+}
+
+async function setSiteDisabled(disabled, showToastFeedback = true) {
+  const boolVal = Boolean(disabled);
+  localStorage.setItem(SITE_DISABLED_STORAGE_KEY, boolVal ? 'true' : 'false');
+  updateSiteDisabledState(boolVal);
+
+  // Synchronisation immédiate vers Supabase Cloud
+  await syncSiteSettingsToCloud(false);
+
+  if (showToastFeedback) {
+    if (boolVal) {
+      showToast("Site désactivé : la vitrine est désormais masquée pour les visiteurs.", "🔒");
+    } else {
+      showToast("Site réactivé : la vitrine est de nouveau accessible à tous !", "🌐");
+    }
+  }
+
+  // Si on est actuellement sur la vitrine, mise à jour immédiate
+  const scView = document.getElementById('showcaseView');
+  if (scView && scView.style.display !== 'none' && typeof refreshShowcase === 'function') {
+    refreshShowcase();
+  }
+}
+
+function initSiteStatusControl() {
+  const checkbox = document.getElementById('toggleSiteStatusCheckbox');
+  const btnToggle = document.getElementById('btnToggleSiteStatus');
+  const btnQuick = document.getElementById('btnQuickReactivateSite');
+  const btnVitrine = document.getElementById('btnVitrineReactivateSite');
+
+  // Application de l'état initial
+  updateSiteDisabledState();
+
+  if (btnToggle) {
+    btnToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const current = isSiteDisabled();
+      setSiteDisabled(!current, true);
+    });
+  }
+
+  if (checkbox) {
+    checkbox.addEventListener('change', () => {
+      // Si la case est cochée => En ligne (disabled = false)
+      // Si la case est décochée => Désactivé (disabled = true)
+      setSiteDisabled(!checkbox.checked, true);
+    });
+  }
+
+  if (btnQuick) {
+    btnQuick.addEventListener('click', (e) => {
+      e.preventDefault();
+      setSiteDisabled(false, true);
+    });
+  }
+
+  if (btnVitrine) {
+    btnVitrine.addEventListener('click', (e) => {
+      e.preventDefault();
+      setSiteDisabled(false, true);
+    });
+  }
 }
 
 function initAppDownloadVisibilityControl() {
@@ -7805,8 +7980,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Initialiser le thème immédiatement
   initTheme();
 
-  // 2. Vérifier l'état de connexion immédiatement
+  // 2. Vérifier l'état de connexion et le statut d'activation du site
   checkAuthStatus();
+  updateSiteDisabledState();
 
   // 3. Attacher TOUS les écouteurs de formulaires et modales immédiatement
   initPublishForm();
@@ -7820,6 +7996,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAdminExport();
   initAboutSection();
   initAdminDashboardStats();
+  initSiteStatusControl();
 
   // 4. Navigation des catégories
   const categoryTabs = document.querySelectorAll('.category-tab');
