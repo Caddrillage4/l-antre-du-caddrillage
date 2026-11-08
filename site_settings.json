@@ -7,5 +7,7 @@
   "customBuilds": null,
   "updatedAt": 1793368000000,
   "siteDisabled": false,
-  "favoriteWritingIds": []
+  "favoriteBadgeText": "Favori",
+  "favoriteWritingIds": [],
+  "favoriteCustomBadges": {}
 }

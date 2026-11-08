@@ -389,13 +389,13 @@
               </div>
             </div>
 
-            <!-- Option Coup de cœur / Favori -->
+            <!-- Option Favori avec message personnalisable -->
             <div class="form-group publish-favorite-group" style="margin-top: 18px; padding: 14px 16px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: var(--radius-md);">
               <label class="reading-time-toggle" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <span style="font-size: 1.25rem;">⭐</span>
                   <div>
-                    <strong style="color: var(--text); font-size: 0.95rem; display: block;">Épingler en Coup de cœur / Favori</strong>
+                    <strong style="color: var(--text); font-size: 0.95rem; display: block;">Épingler en favori</strong>
                     <span style="font-size: 0.82rem; color: var(--text-muted); display: block;">L'écrit s'affichera au-dessus des autres dans la vitrine avec un badge étoile.</span>
                   </div>
                 </div>
@@ -404,6 +404,11 @@
                   <span class="reading-toggle-handle"></span>
                 </span>
               </label>
+              <div id="pubFavoriteBadgeCustomGroup" style="display: none; margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(234, 179, 8, 0.3);">
+                <label class="form-label" for="pubFavoriteBadgeText" style="font-size: 0.84rem; margin-bottom: 4px;">Message personnalisé du badge (optionnel)</label>
+                <input type="text" id="pubFavoriteBadgeText" class="form-input" placeholder="Laisser vide pour afficher « Favori »" style="font-size: 0.88rem; padding: 6px 10px;">
+                <div class="form-hint" style="font-size: 0.78rem;">Par défaut : « Favori » (ou le texte global configuré dans l'identité du site).</div>
+              </div>
             </div>
 
             <div style="margin-top: 26px;">
@@ -557,6 +562,13 @@
                   <label class="form-label" for="adminSiteTaglineInput">Sous-titre / Slogan</label>
                   <input type="text" id="adminSiteTaglineInput" class="form-input" placeholder="Recueil d'écrits, fictions et pensées littéraires">
                   <div class="form-hint">Phrase affichée directement sous le titre principal.</div>
+                </div>
+
+                <!-- 2b. Libellé du badge favori -->
+                <div class="form-group" style="margin-top: 18px;">
+                  <label class="form-label" for="adminFavoriteBadgeInput">Libellé du badge favori (par défaut : « Favori »)</label>
+                  <input type="text" id="adminFavoriteBadgeInput" class="form-input" placeholder="Favori">
+                  <div class="form-hint">Mot ou message affiché sur le badge étoile ⭐ de vos écrits mis en avant (ex: « Favori », « Sélection de l'auteur », « Coup de cœur », « Recommandé »...).</div>
                 </div>
 
                 <!-- 3. Note À propos -->
@@ -1239,13 +1251,13 @@
             </div>
           </div>
 
-          <!-- Option Coup de cœur / Favori -->
+          <!-- Option Favori avec message personnalisable -->
           <div class="form-group edit-favorite-group" style="margin-top: 18px; padding: 14px 16px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: var(--radius-md);">
             <label class="reading-time-toggle" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0;">
               <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.25rem;">⭐</span>
                 <div>
-                  <strong style="color: var(--text); font-size: 0.95rem; display: block;">Mettre cet écrit en Coup de cœur / Favori</strong>
+                  <strong style="color: var(--text); font-size: 0.95rem; display: block;">Mettre cet écrit en favori</strong>
                   <span style="font-size: 0.82rem; color: var(--text-muted); display: block;">L'écrit sera épinglé au-dessus des autres dans la vitrine avec un badge étoile.</span>
                 </div>
               </div>
@@ -1254,6 +1266,11 @@
                 <span class="reading-toggle-handle"></span>
               </span>
             </label>
+            <div id="editFavoriteBadgeCustomGroup" style="display: none; margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(234, 179, 8, 0.3);">
+              <label class="form-label" for="editFavoriteBadgeText" style="font-size: 0.84rem; margin-bottom: 4px;">Message personnalisé du badge (optionnel)</label>
+              <input type="text" id="editFavoriteBadgeText" class="form-input" placeholder="Laisser vide pour afficher « Favori »" style="font-size: 0.88rem; padding: 6px 10px;">
+              <div class="form-hint" style="font-size: 0.78rem;">Par défaut : « Favori » (ou le texte global configuré dans l'identité du site).</div>
+            </div>
           </div>
 
         </div>

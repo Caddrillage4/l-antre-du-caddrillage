@@ -3290,6 +3290,9 @@ function renderWritingCard(writing) {
   const isInteractive = writing.category === 'fiction-interactive';
   const categoryLabel = CATEGORIES_LABELS[writing.category] || writing.category;
   const isFav = (typeof isWritingFavorite === 'function') ? isWritingFavorite(writing.id) : false;
+  const favBadgeText = (isFav && typeof getWritingFavoriteBadgeText === 'function')
+    ? getWritingFavoriteBadgeText(writing.id)
+    : 'Favori';
 
   const formattedDate = (writing.displayDate && String(writing.displayDate).trim())
     ? escapeHtml(String(writing.displayDate).trim())
@@ -3305,7 +3308,7 @@ function renderWritingCard(writing) {
         <div class="card-top">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
-            ${isFav ? `<span class="writing-badge-favorite">⭐ Coup de cœur</span>` : ''}
+            ${isFav ? `<span class="writing-badge-favorite">⭐ ${escapeHtml(favBadgeText)}</span>` : ''}
           </div>
           <span class="card-date">${formattedDate}</span>
         </div>
@@ -3374,7 +3377,7 @@ function renderWritingCard(writing) {
         <div class="card-top">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span class="card-category-badge badge-interactive">🧭 ${escapeHtml(categoryLabel)}</span>
-            ${isFav ? `<span class="writing-badge-favorite">⭐ Coup de cœur</span>` : ''}
+            ${isFav ? `<span class="writing-badge-favorite">⭐ ${escapeHtml(favBadgeText)}</span>` : ''}
           </div>
           <span class="card-date">${formattedDate}</span>
         </div>
@@ -3467,7 +3470,7 @@ function renderWritingCard(writing) {
       <div class="card-top">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
-          ${isFav ? `<span class="writing-badge-favorite">⭐ Coup de cœur</span>` : ''}
+          ${isFav ? `<span class="writing-badge-favorite">⭐ ${escapeHtml(favBadgeText)}</span>` : ''}
         </div>
         <span class="card-date">${formattedDate}</span>
       </div>
@@ -4425,6 +4428,14 @@ function initPublishForm() {
 
   if (!form) return;
 
+  const pubIsFavoriteInput = document.getElementById('pubIsFavorite');
+  const pubFavCustomGroup = document.getElementById('pubFavoriteBadgeCustomGroup');
+  if (pubIsFavoriteInput && pubFavCustomGroup) {
+    pubIsFavoriteInput.addEventListener('change', () => {
+      pubFavCustomGroup.style.display = pubIsFavoriteInput.checked ? 'block' : 'none';
+    });
+  }
+
   function updatePubCategoryVisibility() {
     const isPoetry = catEl && catEl.value === 'poesie';
     const isInteractive = catEl && catEl.value === 'fiction-interactive';
@@ -4784,15 +4795,20 @@ function initPublishForm() {
       const primaryFile = isInteractive ? selectedInteractiveData.primaryFile : file;
       await dbSaveWriting(writing, primaryFile);
 
-      // Si coché en coup de cœur / favori dès la publication
+      // Si coché en favori dès la publication
       const pubIsFavorite = document.getElementById('pubIsFavorite');
+      const pubFavText = document.getElementById('pubFavoriteBadgeText');
+      const pubFavGroup = document.getElementById('pubFavoriteBadgeCustomGroup');
       if (pubIsFavorite && pubIsFavorite.checked && typeof setWritingFavorite === 'function') {
-        setWritingFavorite(writingId, true, false);
+        const customTxt = pubFavText ? pubFavText.value.trim() : '';
+        setWritingFavorite(writingId, true, customTxt || null, false);
         await syncSiteSettingsToCloud(false);
       }
 
       form.reset();
       if (pubIsFavorite) pubIsFavorite.checked = false;
+      if (pubFavText) pubFavText.value = '';
+      if (pubFavGroup) pubFavGroup.style.display = 'none';
       selectedInteractiveData = null;
       if (statusBox) statusBox.classList.remove('active');
       if (interactiveStatusBox) interactiveStatusBox.classList.remove('active');
@@ -4925,6 +4941,9 @@ async function refreshAdminWritings() {
       const categoryLabel = CATEGORIES_LABELS[w.category] || w.category;
       const poemText = w.poetryText || w.summary || '';
       const isFav = (typeof isWritingFavorite === 'function') ? isWritingFavorite(w.id) : false;
+      const favBadgeText = (isFav && typeof getWritingFavoriteBadgeText === 'function')
+        ? getWritingFavoriteBadgeText(w.id)
+        : 'Favori';
       const excerpt = isPoetry
         ? (poemText.split('\n').filter(Boolean).slice(0, 3).join(' / ') || 'Vers poétiques...')
         : w.summary;
@@ -4942,7 +4961,7 @@ async function refreshAdminWritings() {
           <div class="item-main-info">
             <div class="item-badges-row">
               <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
-              ${isFav ? `<span class="badge-favorite-star" title="Écrit mis en avant (Coup de cœur)">⭐ Coup de cœur</span>` : ''}
+              ${isFav ? `<span class="badge-favorite-star" title="Écrit mis en avant (${escapeHtml(favBadgeText)})">⭐ ${escapeHtml(favBadgeText)}</span>` : ''}
               <span class="card-date">${(w.displayDate && String(w.displayDate).trim()) ? escapeHtml(String(w.displayDate).trim()) : formatDisplayDate(w.createdAt)}</span>
             </div>
             <div class="item-title">${escapeHtml(w.title)}</div>
@@ -4956,8 +4975,8 @@ async function refreshAdminWritings() {
             </div>
           </div>
           <div class="item-actions-row">
-            <button type="button" class="btn-sm-action btn-sm-fav ${isFav ? 'is-fav' : ''}" onclick="toggleWritingFavorite('${w.id}', true)" title="${isFav ? 'Retirer des coups de cœur' : 'Mettre en coup de cœur (épingler en haut)'}">
-              ${isFav ? '⭐ En favori' : '☆ Coup de cœur'}
+            <button type="button" class="btn-sm-action btn-sm-fav ${isFav ? 'is-fav' : ''}" onclick="toggleWritingFavorite('${w.id}', true)" title="${isFav ? 'Retirer des favoris' : 'Mettre en favori (épingler en haut)'}">
+              ${isFav ? `⭐ ${escapeHtml(favBadgeText)}` : '☆ Favori'}
             </button>
             <button type="button" class="btn-sm-action" onclick="openPdfReaderFromAdmin('${w.id}')">
               👁️ Visionner
@@ -5225,8 +5244,18 @@ window.openEditModal = async function(id) {
     }
 
     const editIsFavorite = document.getElementById('editIsFavorite');
+    const editFavGroup = document.getElementById('editFavoriteBadgeCustomGroup');
+    const editFavText = document.getElementById('editFavoriteBadgeText');
+    const isFav = (typeof isWritingFavorite === 'function') ? isWritingFavorite(writing.id) : false;
     if (editIsFavorite) {
-      editIsFavorite.checked = (typeof isWritingFavorite === 'function') ? isWritingFavorite(writing.id) : false;
+      editIsFavorite.checked = isFav;
+    }
+    if (editFavGroup) {
+      editFavGroup.style.display = isFav ? 'block' : 'none';
+    }
+    if (editFavText) {
+      const customBadges = (typeof getFavoriteCustomBadges === 'function') ? getFavoriteCustomBadges() : {};
+      editFavText.value = customBadges[String(writing.id)] || '';
     }
 
     const editPageCount = document.getElementById('editPageCount');
@@ -5301,6 +5330,14 @@ function initEditForm() {
   let newInteractiveData = null;
 
   if (!form) return;
+
+  const editIsFavoriteInput = document.getElementById('editIsFavorite');
+  const editFavCustomGroup = document.getElementById('editFavoriteBadgeCustomGroup');
+  if (editIsFavoriteInput && editFavCustomGroup) {
+    editIsFavoriteInput.addEventListener('change', () => {
+      editFavCustomGroup.style.display = editIsFavoriteInput.checked ? 'block' : 'none';
+    });
+  }
 
   function updateEditCategoryVisibility() {
     const isPoetry = editCategory && editCategory.value === 'poesie';
@@ -5629,10 +5666,12 @@ function initEditForm() {
     try {
       await dbSaveWriting(currentEditingWriting, newFile);
 
-      // Prise en compte de la case Favori (Coup de cœur)
+      // Prise en compte de la case Favori et de son message personnalisé
       const editIsFavorite = document.getElementById('editIsFavorite');
+      const editFavText = document.getElementById('editFavoriteBadgeText');
       if (editIsFavorite && typeof setWritingFavorite === 'function') {
-        setWritingFavorite(currentEditingWriting.id, editIsFavorite.checked, false);
+        const customTxt = editFavText ? editFavText.value.trim() : '';
+        setWritingFavorite(currentEditingWriting.id, editIsFavorite.checked, customTxt || null, false);
         await syncSiteSettingsToCloud(false);
       }
 
@@ -5986,6 +6025,11 @@ function applySiteIdentity() {
   if (inputTagline && document.activeElement !== inputTagline) inputTagline.value = tagline;
   if (textareaAbout && document.activeElement !== textareaAbout) textareaAbout.value = getAboutText();
 
+  const inputFavBadge = document.getElementById('adminFavoriteBadgeInput');
+  if (inputFavBadge && document.activeElement !== inputFavBadge && typeof getFavoriteBadgeDefaultText === 'function') {
+    inputFavBadge.value = getFavoriteBadgeDefaultText();
+  }
+
   // Mise à jour de la visibilité du bouton d'application
   if (typeof setAppDownloadBtnVisibility === 'function') {
     setAppDownloadBtnVisibility(isAppDownloadBtnVisible(), false);
@@ -6117,8 +6161,48 @@ function setAppDownloadBtnVisibility(visible, showFeedbackToast = false) {
 }
 
 // =========================================================
-// GESTION DES ÉCRITS FAVORIS (COUPS DE CŒUR MIS EN AVANT)
+// GESTION DES ÉCRITS FAVORIS (ÉPINGLÉS AVEC BADGE ÉTOILE)
 // =========================================================
+
+const DEFAULT_FAVORITE_BADGE_TEXT = 'Favori';
+
+function getFavoriteBadgeDefaultText() {
+  const custom = localStorage.getItem('caddrillage_favorite_badge_text');
+  return (custom && custom.trim()) ? custom.trim() : DEFAULT_FAVORITE_BADGE_TEXT;
+}
+
+function getFavoriteCustomBadges() {
+  try {
+    const raw = localStorage.getItem('caddrillage_favorite_custom_badges');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveFavoriteCustomBadges(badgesObj) {
+  try {
+    if (badgesObj && typeof badgesObj === 'object') {
+      localStorage.setItem('caddrillage_favorite_custom_badges', JSON.stringify(badgesObj));
+    } else {
+      localStorage.removeItem('caddrillage_favorite_custom_badges');
+    }
+  } catch (e) {
+    console.warn('saveFavoriteCustomBadges error:', e);
+  }
+}
+
+function getWritingFavoriteBadgeText(writingId) {
+  if (!writingId) return getFavoriteBadgeDefaultText();
+  const customBadges = getFavoriteCustomBadges();
+  const custom = customBadges[String(writingId)];
+  if (custom && String(custom).trim()) {
+    return String(custom).trim();
+  }
+  return getFavoriteBadgeDefaultText();
+}
 
 function getFavoriteWritingIds() {
   try {
@@ -6146,16 +6230,27 @@ function isWritingFavorite(writingId) {
   return ids.includes(String(writingId));
 }
 
-function setWritingFavorite(writingId, isFav, shouldSync = true) {
+function setWritingFavorite(writingId, isFav, customBadgeText = null, shouldSync = true) {
   if (!writingId) return;
   const strId = String(writingId);
   let ids = getFavoriteWritingIds();
+  const customBadges = getFavoriteCustomBadges();
+
   if (isFav) {
     if (!ids.includes(strId)) ids.unshift(strId);
+    if (customBadgeText && String(customBadgeText).trim()) {
+      customBadges[strId] = String(customBadgeText).trim();
+    } else {
+      delete customBadges[strId];
+    }
   } else {
     ids = ids.filter(id => id !== strId);
+    delete customBadges[strId];
   }
+
   saveFavoriteWritingIds(ids);
+  saveFavoriteCustomBadges(customBadges);
+
   if (shouldSync) {
     syncSiteSettingsToCloud(false);
   }
@@ -6165,9 +6260,10 @@ async function toggleWritingFavorite(writingId, showToastFeedback = true) {
   if (!writingId) return;
   const current = isWritingFavorite(writingId);
   const next = !current;
-  setWritingFavorite(writingId, next, true);
+  setWritingFavorite(writingId, next, null, true);
   if (showToastFeedback) {
-    showToast(next ? '⭐ Écrit mis en coup de cœur (épinglé en tête) !' : 'Écrit retiré des coups de cœur.', '⭐');
+    const badgeText = getWritingFavoriteBadgeText(writingId);
+    showToast(next ? `⭐ Écrit mis en favori (« ${badgeText} ») et épinglé en tête !` : 'Écrit retiré des favoris.', '⭐');
   }
   await refreshAdminWritings();
   await refreshShowcase();
@@ -6193,6 +6289,8 @@ function getAllCurrentSiteSettings() {
   const updatedAt = Number(localStorage.getItem('caddrillage_settings_updated_at')) || Date.now();
   const siteDisabled = localStorage.getItem('caddrillage_site_disabled') === 'true';
   const favoriteWritingIds = getFavoriteWritingIds();
+  const favoriteBadgeText = getFavoriteBadgeDefaultText();
+  const favoriteCustomBadges = getFavoriteCustomBadges();
 
   return {
     siteTitle: getSiteTitle(),
@@ -6202,7 +6300,9 @@ function getAllCurrentSiteSettings() {
     customThemes: customThemes,
     customBuilds: customBuilds,
     siteDisabled: siteDisabled,
+    favoriteBadgeText: favoriteBadgeText,
     favoriteWritingIds: favoriteWritingIds,
+    favoriteCustomBadges: favoriteCustomBadges,
     updatedAt: updatedAt
   };
 }
@@ -6226,11 +6326,21 @@ function applyAllSiteSettings(settings, saveToLocal = true) {
     if (settings.siteDisabled !== undefined && settings.siteDisabled !== null) {
       localStorage.setItem('caddrillage_site_disabled', settings.siteDisabled ? 'true' : 'false');
     }
+    if (settings.favoriteBadgeText !== undefined && settings.favoriteBadgeText !== null) {
+      localStorage.setItem('caddrillage_favorite_badge_text', String(settings.favoriteBadgeText).trim() || DEFAULT_FAVORITE_BADGE_TEXT);
+    }
     if (settings.favoriteWritingIds !== undefined) {
       if (Array.isArray(settings.favoriteWritingIds)) {
         saveFavoriteWritingIds(settings.favoriteWritingIds);
       } else {
         saveFavoriteWritingIds([]);
+      }
+    }
+    if (settings.favoriteCustomBadges !== undefined) {
+      if (settings.favoriteCustomBadges && typeof settings.favoriteCustomBadges === 'object') {
+        saveFavoriteCustomBadges(settings.favoriteCustomBadges);
+      } else {
+        saveFavoriteCustomBadges({});
       }
     }
     if (settings.customThemes !== undefined) {
@@ -6592,6 +6702,7 @@ function initAboutSection() {
   const form = document.getElementById('adminIdentityForm') || document.getElementById('adminAboutForm');
   const inputTitle = document.getElementById('adminSiteTitleInput');
   const inputTagline = document.getElementById('adminSiteTaglineInput');
+  const inputFavBadge = document.getElementById('adminFavoriteBadgeInput');
   const textareaAbout = document.getElementById('adminAboutInput');
   const btnReset = document.getElementById('btnResetIdentityDefault') || document.getElementById('btnResetAboutDefault');
 
@@ -6617,6 +6728,10 @@ function initAboutSection() {
       if (inputTagline) {
         localStorage.setItem('caddrillage_site_tagline', newTagline);
       }
+      if (inputFavBadge) {
+        const badgeVal = inputFavBadge.value.trim();
+        localStorage.setItem('caddrillage_favorite_badge_text', badgeVal || DEFAULT_FAVORITE_BADGE_TEXT);
+      }
       if (textareaAbout) {
         localStorage.setItem('caddrillage_about_text', newAbout || DEFAULT_ABOUT_TEXT);
       }
@@ -6637,10 +6752,12 @@ function initAboutSection() {
         localStorage.removeItem('caddrillage_site_title');
         localStorage.removeItem('caddrillage_site_tagline');
         localStorage.removeItem('caddrillage_about_text');
+        localStorage.removeItem('caddrillage_favorite_badge_text');
         localStorage.removeItem(APP_DOWNLOAD_BTN_STORAGE_KEY);
 
         if (inputTitle) inputTitle.value = DEFAULT_SITE_TITLE;
         if (inputTagline) inputTagline.value = DEFAULT_SITE_TAGLINE;
+        if (inputFavBadge) inputFavBadge.value = DEFAULT_FAVORITE_BADGE_TEXT;
         if (textareaAbout) textareaAbout.value = DEFAULT_ABOUT_TEXT;
 
         applySiteIdentity();
