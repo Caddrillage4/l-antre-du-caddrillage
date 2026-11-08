@@ -2813,6 +2813,12 @@ async function refreshShowcase() {
 
     // Tri des écrits selon l'option choisie (Temps de lecture ou Chronologique)
     filtered.sort((a, b) => {
+      // 0. Coup de cœur / Favori : toujours épinglé au-dessus des autres
+      const isFavA = (typeof isWritingFavorite === 'function') ? isWritingFavorite(a.id) : false;
+      const isFavB = (typeof isWritingFavorite === 'function') ? isWritingFavorite(b.id) : false;
+      if (isFavA && !isFavB) return -1;
+      if (!isFavA && isFavB) return 1;
+
       // 1. Vue purement poésie : la poésie n'a pas de métrique de temps, tri chronologique
       if (isOnlyPoetryView) {
         const timeA = getWritingSortTimestamp(a);
@@ -3264,6 +3270,18 @@ window.togglePoetryExpand = function(id) {
     container.classList.add('expanded');
     btn.classList.add('active');
     if (spanText) spanText.textContent = 'Réduire';
+    if (typeof dbGetWriting === 'function' && typeof trackAnalyticsEvent === 'function') {
+      dbGetWriting(id).then(w => {
+        if (w) {
+          trackAnalyticsEvent({
+            type: 'read_poetry',
+            writingId: w.id,
+            title: w.title,
+            category: 'poesie'
+          });
+        }
+      }).catch(() => {});
+    }
   }
 };
 
@@ -3271,6 +3289,7 @@ function renderWritingCard(writing) {
   const isPoetry = writing.category === 'poesie';
   const isInteractive = writing.category === 'fiction-interactive';
   const categoryLabel = CATEGORIES_LABELS[writing.category] || writing.category;
+  const isFav = (typeof isWritingFavorite === 'function') ? isWritingFavorite(writing.id) : false;
 
   const formattedDate = (writing.displayDate && String(writing.displayDate).trim())
     ? escapeHtml(String(writing.displayDate).trim())
@@ -3282,9 +3301,12 @@ function renderWritingCard(writing) {
     const isLongPoem = lines.length > 10 || poemContent.length > 380;
 
     return `
-      <article class="writing-card poetry-card" id="card-${writing.id}">
+      <article class="writing-card poetry-card ${isFav ? 'is-favorite-card' : ''}" id="card-${writing.id}">
         <div class="card-top">
-          <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
+            ${isFav ? `<span class="writing-badge-favorite">⭐ Coup de cœur</span>` : ''}
+          </div>
           <span class="card-date">${formattedDate}</span>
         </div>
 
@@ -3348,9 +3370,12 @@ function renderWritingCard(writing) {
       : '';
 
     return `
-      <article class="writing-card interactive-fiction-card" id="card-${writing.id}">
+      <article class="writing-card interactive-fiction-card ${isFav ? 'is-favorite-card' : ''}" id="card-${writing.id}">
         <div class="card-top">
-          <span class="card-category-badge badge-interactive">🧭 ${escapeHtml(categoryLabel)}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="card-category-badge badge-interactive">🧭 ${escapeHtml(categoryLabel)}</span>
+            ${isFav ? `<span class="writing-badge-favorite">⭐ Coup de cœur</span>` : ''}
+          </div>
           <span class="card-date">${formattedDate}</span>
         </div>
         <h3 class="card-title">${escapeHtml(writing.title)}</h3>
@@ -3438,9 +3463,12 @@ function renderWritingCard(writing) {
     : '';
 
   return `
-    <article class="writing-card" id="card-${writing.id}">
+    <article class="writing-card ${isFav ? 'is-favorite-card' : ''}" id="card-${writing.id}">
       <div class="card-top">
-        <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
+          ${isFav ? `<span class="writing-badge-favorite">⭐ Coup de cœur</span>` : ''}
+        </div>
         <span class="card-date">${formattedDate}</span>
       </div>
       <h3 class="card-title">${escapeHtml(writing.title)}</h3>
@@ -3507,11 +3535,31 @@ function openPdfReader(writing) {
   if (titleEl) titleEl.textContent = writing.title;
   if (iframe) iframe.src = pdfSrc;
 
+  // Enregistrement de la lecture dans les analytics
+  if (typeof trackAnalyticsEvent === 'function') {
+    trackAnalyticsEvent({
+      type: 'read_pdf',
+      writingId: writing.id,
+      title: writing.title,
+      category: writing.category
+    });
+  }
+
   const fileName = writing.pdfFileName || `${slugify(writing.title)}.pdf`;
   if (downloadBtn) {
     downloadBtn.href = pdfSrc;
     downloadBtn.setAttribute('download', fileName);
     downloadBtn.target = '_blank';
+    downloadBtn.onclick = () => {
+      if (typeof trackAnalyticsEvent === 'function') {
+        trackAnalyticsEvent({
+          type: 'download_pdf',
+          writingId: writing.id,
+          title: writing.title,
+          category: writing.category
+        });
+      }
+    };
   }
 
   const openInNewTab = () => {
@@ -3564,6 +3612,14 @@ function downloadPdfFile(writing) {
 
   if (shouldRevoke) {
     setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  }
+  if (typeof trackAnalyticsEvent === 'function') {
+    trackAnalyticsEvent({
+      type: 'download_pdf',
+      writingId: writing.id,
+      title: writing.title,
+      category: writing.category
+    });
   }
   showToast(`Téléchargement de "${writing.title}" lancé.`);
 }
@@ -3992,6 +4048,16 @@ async function openInteractiveFictionModal(writing) {
 
   if (dropdownMenu) dropdownMenu.classList.remove('active');
   if (titleEl) titleEl.textContent = writing.title;
+
+  // Enregistrement du lancement de la fiction dans les analytics
+  if (typeof trackAnalyticsEvent === 'function') {
+    trackAnalyticsEvent({
+      type: 'play_fiction',
+      writingId: writing.id,
+      title: writing.title,
+      category: 'fiction-interactive'
+    });
+  }
 
   const showLoader = (msg = 'Chargement de la fiction interactive...') => {
     if (loaderText) loaderText.textContent = msg;
@@ -4717,7 +4783,16 @@ function initPublishForm() {
     try {
       const primaryFile = isInteractive ? selectedInteractiveData.primaryFile : file;
       await dbSaveWriting(writing, primaryFile);
+
+      // Si coché en coup de cœur / favori dès la publication
+      const pubIsFavorite = document.getElementById('pubIsFavorite');
+      if (pubIsFavorite && pubIsFavorite.checked && typeof setWritingFavorite === 'function') {
+        setWritingFavorite(writingId, true, false);
+        await syncSiteSettingsToCloud(false);
+      }
+
       form.reset();
+      if (pubIsFavorite) pubIsFavorite.checked = false;
       selectedInteractiveData = null;
       if (statusBox) statusBox.classList.remove('active');
       if (interactiveStatusBox) interactiveStatusBox.classList.remove('active');
@@ -4849,6 +4924,7 @@ async function refreshAdminWritings() {
       const isPoetry = w.category === 'poesie';
       const categoryLabel = CATEGORIES_LABELS[w.category] || w.category;
       const poemText = w.poetryText || w.summary || '';
+      const isFav = (typeof isWritingFavorite === 'function') ? isWritingFavorite(w.id) : false;
       const excerpt = isPoetry
         ? (poemText.split('\n').filter(Boolean).slice(0, 3).join(' / ') || 'Vers poétiques...')
         : w.summary;
@@ -4862,10 +4938,11 @@ async function refreshAdminWritings() {
            <span>⏳ ${w.readingTime ? escapeHtml(w.readingTime) : 'Non estimé'}</span>`;
 
       return `
-        <div class="admin-writing-item" id="admin-item-${w.id}">
+        <div class="admin-writing-item ${isFav ? 'is-favorite-card' : ''}" id="admin-item-${w.id}">
           <div class="item-main-info">
             <div class="item-badges-row">
               <span class="card-category-badge">${escapeHtml(categoryLabel)}</span>
+              ${isFav ? `<span class="badge-favorite-star" title="Écrit mis en avant (Coup de cœur)">⭐ Coup de cœur</span>` : ''}
               <span class="card-date">${(w.displayDate && String(w.displayDate).trim()) ? escapeHtml(String(w.displayDate).trim()) : formatDisplayDate(w.createdAt)}</span>
             </div>
             <div class="item-title">${escapeHtml(w.title)}</div>
@@ -4879,6 +4956,9 @@ async function refreshAdminWritings() {
             </div>
           </div>
           <div class="item-actions-row">
+            <button type="button" class="btn-sm-action btn-sm-fav ${isFav ? 'is-fav' : ''}" onclick="toggleWritingFavorite('${w.id}', true)" title="${isFav ? 'Retirer des coups de cœur' : 'Mettre en coup de cœur (épingler en haut)'}">
+              ${isFav ? '⭐ En favori' : '☆ Coup de cœur'}
+            </button>
             <button type="button" class="btn-sm-action" onclick="openPdfReaderFromAdmin('${w.id}')">
               👁️ Visionner
             </button>
@@ -5142,6 +5222,11 @@ window.openEditModal = async function(id) {
     const editDisplayDate = document.getElementById('editDisplayDate');
     if (editDisplayDate) {
       editDisplayDate.value = writing.displayDate || formatDisplayDate(writing.createdAt);
+    }
+
+    const editIsFavorite = document.getElementById('editIsFavorite');
+    if (editIsFavorite) {
+      editIsFavorite.checked = (typeof isWritingFavorite === 'function') ? isWritingFavorite(writing.id) : false;
     }
 
     const editPageCount = document.getElementById('editPageCount');
@@ -5543,6 +5628,14 @@ function initEditForm() {
 
     try {
       await dbSaveWriting(currentEditingWriting, newFile);
+
+      // Prise en compte de la case Favori (Coup de cœur)
+      const editIsFavorite = document.getElementById('editIsFavorite');
+      if (editIsFavorite && typeof setWritingFavorite === 'function') {
+        setWritingFavorite(currentEditingWriting.id, editIsFavorite.checked, false);
+        await syncSiteSettingsToCloud(false);
+      }
+
       const modal = document.getElementById('editModal');
       if (modal) modal.classList.remove('active');
       showToast(`L'écrit "${title}" a été modifié avec succès.`);
@@ -6024,6 +6117,63 @@ function setAppDownloadBtnVisibility(visible, showFeedbackToast = false) {
 }
 
 // =========================================================
+// GESTION DES ÉCRITS FAVORIS (COUPS DE CŒUR MIS EN AVANT)
+// =========================================================
+
+function getFavoriteWritingIds() {
+  try {
+    const raw = localStorage.getItem('caddrillage_favorite_writings');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveFavoriteWritingIds(ids) {
+  try {
+    const unique = Array.from(new Set((ids || []).map(String)));
+    localStorage.setItem('caddrillage_favorite_writings', JSON.stringify(unique));
+  } catch (e) {
+    console.warn('saveFavoriteWritingIds error:', e);
+  }
+}
+
+function isWritingFavorite(writingId) {
+  if (!writingId) return false;
+  const ids = getFavoriteWritingIds();
+  return ids.includes(String(writingId));
+}
+
+function setWritingFavorite(writingId, isFav, shouldSync = true) {
+  if (!writingId) return;
+  const strId = String(writingId);
+  let ids = getFavoriteWritingIds();
+  if (isFav) {
+    if (!ids.includes(strId)) ids.unshift(strId);
+  } else {
+    ids = ids.filter(id => id !== strId);
+  }
+  saveFavoriteWritingIds(ids);
+  if (shouldSync) {
+    syncSiteSettingsToCloud(false);
+  }
+}
+
+async function toggleWritingFavorite(writingId, showToastFeedback = true) {
+  if (!writingId) return;
+  const current = isWritingFavorite(writingId);
+  const next = !current;
+  setWritingFavorite(writingId, next, true);
+  if (showToastFeedback) {
+    showToast(next ? '⭐ Écrit mis en coup de cœur (épinglé en tête) !' : 'Écrit retiré des coups de cœur.', '⭐');
+  }
+  await refreshAdminWritings();
+  await refreshShowcase();
+}
+
+// =========================================================
 // SYNCHRONISATION GLOBALE DE LA CONFIGURATION DU SITE (SUPABASE & HORS-LIGNE)
 // =========================================================
 
@@ -6042,6 +6192,7 @@ function getAllCurrentSiteSettings() {
 
   const updatedAt = Number(localStorage.getItem('caddrillage_settings_updated_at')) || Date.now();
   const siteDisabled = localStorage.getItem('caddrillage_site_disabled') === 'true';
+  const favoriteWritingIds = getFavoriteWritingIds();
 
   return {
     siteTitle: getSiteTitle(),
@@ -6051,6 +6202,7 @@ function getAllCurrentSiteSettings() {
     customThemes: customThemes,
     customBuilds: customBuilds,
     siteDisabled: siteDisabled,
+    favoriteWritingIds: favoriteWritingIds,
     updatedAt: updatedAt
   };
 }
@@ -6073,6 +6225,13 @@ function applyAllSiteSettings(settings, saveToLocal = true) {
     }
     if (settings.siteDisabled !== undefined && settings.siteDisabled !== null) {
       localStorage.setItem('caddrillage_site_disabled', settings.siteDisabled ? 'true' : 'false');
+    }
+    if (settings.favoriteWritingIds !== undefined) {
+      if (Array.isArray(settings.favoriteWritingIds)) {
+        saveFavoriteWritingIds(settings.favoriteWritingIds);
+      } else {
+        saveFavoriteWritingIds([]);
+      }
     }
     if (settings.customThemes !== undefined) {
       if (settings.customThemes && typeof settings.customThemes === 'object') {
@@ -6119,6 +6278,11 @@ function applyAllSiteSettings(settings, saveToLocal = true) {
   }
   if (typeof renderAdminBuildsEditor === 'function') {
     renderAdminBuildsEditor();
+  }
+
+  // Rafraîchissement dynamique de la vitrine pour prendre en compte les favoris épinglés
+  if (typeof refreshShowcase === 'function') {
+    refreshShowcase();
   }
 }
 
@@ -6501,6 +6665,459 @@ function initAboutSection() {
 
   // Premier rendu du contenu dans la modale
   renderAboutText(getAboutText());
+}
+
+// =========================================================
+// ANALYTICS & JOURNAL D'ACTIVITÉ EN TEMPS RÉEL (FRÉQUENTATION)
+// =========================================================
+
+function getAnalyticsDevice() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  if (/ipad|tablet|(android(?!.*mobile))/i.test(ua)) return 'Tablette';
+  if (/mobile|iphone|android|webos|blackberry|iemobile|opera mini/i.test(ua)) return 'Mobile';
+  return 'Ordinateur';
+}
+
+function getAnalyticsReferrerSource() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('utm_source') === 'instagram' || urlParams.get('source') === 'instagram' || urlParams.has('igshid')) {
+      return 'Instagram';
+    }
+    const ref = (document.referrer || '').toLowerCase();
+    if (!ref) return 'Lien direct';
+    if (ref.includes('instagram.com')) return 'Instagram';
+    if (ref.includes('facebook.com') || ref.includes('fb.com')) return 'Facebook';
+    if (ref.includes('twitter.com') || ref.includes('t.co') || ref.includes('x.com')) return 'X / Twitter';
+    if (ref.includes('threads.net')) return 'Threads';
+    if (ref.includes('google.')) return 'Google';
+    if (ref.includes('tiktok.com')) return 'TikTok';
+    try {
+      const u = new URL(ref);
+      return u.hostname.replace(/^www\./, '');
+    } catch (e) {
+      return 'Lien externe';
+    }
+  } catch (e) {
+    return 'Lien direct';
+  }
+}
+
+function getCachedAnalytics() {
+  try {
+    const raw = localStorage.getItem('caddrillage_site_analytics_cache');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (!parsed.writingViews) parsed.writingViews = {};
+        if (!Array.isArray(parsed.events)) parsed.events = [];
+        return parsed;
+      }
+    }
+  } catch (e) {}
+  return {
+    totalVisits: 0,
+    totalReads: 0,
+    totalDownloads: 0,
+    writingViews: {},
+    events: [],
+    updatedAt: 0
+  };
+}
+
+function saveCachedAnalytics(data) {
+  try {
+    localStorage.setItem('caddrillage_site_analytics_cache', JSON.stringify(data));
+  } catch (e) {}
+}
+
+function updateLocalAnalyticsCache(event) {
+  const data = getCachedAnalytics();
+  if (event.type === 'visit') {
+    data.totalVisits = (Number(data.totalVisits) || 0) + 1;
+  } else if (event.type.startsWith('read_') || event.type === 'play_fiction') {
+    data.totalReads = (Number(data.totalReads) || 0) + 1;
+    if (event.writingId) {
+      const strId = String(event.writingId);
+      data.writingViews[strId] = (Number(data.writingViews[strId]) || 0) + 1;
+    }
+  } else if (event.type.startsWith('download_')) {
+    data.totalDownloads = (Number(data.totalDownloads) || 0) + 1;
+  }
+  data.events.unshift(event);
+  if (data.events.length > 150) {
+    data.events = data.events.slice(0, 150);
+  }
+  data.updatedAt = Date.now();
+  saveCachedAnalytics(data);
+}
+
+async function syncAnalyticsEventToCloud(event) {
+  if (!navigator.onLine) return;
+
+  try {
+    let cloudData = null;
+    try {
+      const cloudUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${SUPABASE_CONFIG.bucket}/site_analytics.json?t=${Date.now()}`;
+      const res = await fetch(cloudUrl);
+      if (res.ok) {
+        cloudData = await res.json();
+      }
+    } catch (e) {}
+
+    if (!cloudData || typeof cloudData !== 'object') {
+      cloudData = getCachedAnalytics();
+    }
+    if (!cloudData.writingViews) cloudData.writingViews = {};
+    if (!Array.isArray(cloudData.events)) cloudData.events = [];
+
+    if (event.type === 'visit') {
+      cloudData.totalVisits = (Number(cloudData.totalVisits) || 0) + 1;
+    } else if (event.type.startsWith('read_') || event.type === 'play_fiction') {
+      cloudData.totalReads = (Number(cloudData.totalReads) || 0) + 1;
+      if (event.writingId) {
+        const strId = String(event.writingId);
+        cloudData.writingViews[strId] = (Number(cloudData.writingViews[strId]) || 0) + 1;
+      }
+    } else if (event.type.startsWith('download_')) {
+      cloudData.totalDownloads = (Number(cloudData.totalDownloads) || 0) + 1;
+    }
+
+    const existingIds = new Set(cloudData.events.map(e => e.id));
+    if (!existingIds.has(event.id)) {
+      cloudData.events.unshift(event);
+    }
+    if (cloudData.events.length > 150) {
+      cloudData.events = cloudData.events.slice(0, 150);
+    }
+    cloudData.updatedAt = Date.now();
+
+    const jsonBody = JSON.stringify(cloudData, null, 2);
+    const uploadUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/${SUPABASE_CONFIG.bucket}/site_analytics.json`;
+    await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_CONFIG.anonKey,
+        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        'x-upsert': 'true',
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: jsonBody
+    });
+
+    saveCachedAnalytics(cloudData);
+  } catch (err) {
+    console.debug('syncAnalyticsEventToCloud notice:', err);
+  }
+}
+
+function trackAnalyticsEvent(eventData) {
+  if (!eventData || !eventData.type) return;
+  // Ne pas comptabiliser les actions de l'auteur lorsqu'il est connecté
+  if (localStorage.getItem('caddrillage_logged_in') === 'true') return;
+
+  const event = {
+    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    type: eventData.type,
+    title: eventData.title || '',
+    writingId: eventData.writingId ? String(eventData.writingId) : null,
+    category: eventData.category || null,
+    device: eventData.device || getAnalyticsDevice(),
+    source: eventData.source || getAnalyticsReferrerSource(),
+    timestamp: Date.now()
+  };
+
+  updateLocalAnalyticsCache(event);
+  syncAnalyticsEventToCloud(event).catch(() => {});
+}
+
+async function fetchSiteAnalytics() {
+  if (navigator.onLine) {
+    try {
+      const cloudUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${SUPABASE_CONFIG.bucket}/site_analytics.json?t=${Date.now()}`;
+      const res = await fetch(cloudUrl);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data === 'object') {
+          saveCachedAnalytics(data);
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn('fetchSiteAnalytics cloud error:', e);
+    }
+  }
+
+  try {
+    const localRes = await fetch(`site_analytics.json?t=${Date.now()}`);
+    if (localRes.ok) {
+      const localData = await localRes.json();
+      if (localData && typeof localData === 'object') {
+        saveCachedAnalytics(localData);
+        return localData;
+      }
+    }
+  } catch (e) {}
+
+  return getCachedAnalytics();
+}
+
+function formatAnalyticsRelativeTime(timestamp) {
+  if (!timestamp) return 'Récemment';
+  const diffSec = Math.floor((Date.now() - Number(timestamp)) / 1000);
+  if (diffSec < 45) return 'À l\'instant';
+  if (diffSec < 3600) {
+    const mins = Math.max(1, Math.floor(diffSec / 60));
+    return `Il y a ${mins} min`;
+  }
+  if (diffSec < 86400) {
+    const hours = Math.floor(diffSec / 3600);
+    return `Il y a ${hours} h`;
+  }
+  const date = new Date(Number(timestamp));
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  if (diffSec < 172800) {
+    return `Hier à ${hours}:${minutes}`;
+  }
+  return `${day}/${month} à ${hours}:${minutes}`;
+}
+
+async function renderAdminAnalytics(forceFetch = false) {
+  const container = document.getElementById('adminAnalyticsContent');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 0.92rem;">
+      <span style="display:inline-block; margin-right:8px;">⏳</span> Chargement des données de fréquentation et du journal d'activité...
+    </div>
+  `;
+
+  let analytics = getCachedAnalytics();
+  const hasTs = Boolean(analytics.updatedAt || analytics.lastUpdated);
+  if (forceFetch || !hasTs) {
+    analytics = await fetchSiteAnalytics();
+  }
+
+  let writings = [];
+  try {
+    writings = await dbGetAllWritings();
+  } catch (e) {}
+  const writingsById = {};
+  writings.forEach(w => {
+    writingsById[String(w.id)] = w;
+  });
+
+  const totalVisits = Number(analytics.totalVisits) || 0;
+  const totalReads = Number(analytics.totalReads) || 0;
+  const totalDownloads = Number(analytics.totalDownloads) || 0;
+  const writingViews = analytics.writingViews || {};
+  const distinctReadCount = Object.keys(writingViews).filter(id => Number(writingViews[id]) > 0).length;
+  const events = Array.isArray(analytics.events) ? analytics.events : [];
+
+  const topList = Object.entries(writingViews)
+    .map(([id, count]) => {
+      const w = writingsById[id];
+      return {
+        id,
+        title: w ? w.title : `Écrit #${id}`,
+        category: w ? w.category : null,
+        count: Number(count) || 0
+      };
+    })
+    .filter(item => item.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const maxViews = topList.length > 0 ? topList[0].count : 1;
+  const lastTs = analytics.updatedAt || analytics.lastUpdated;
+  const timeFormatted = lastTs ? formatAnalyticsRelativeTime(lastTs) : 'À l\'instant';
+
+  const topWritingsHtml = topList.length === 0 ? `
+    <div style="padding: 28px 12px; text-align: center; color: var(--text-muted); font-size: 0.88rem; font-style: italic;">
+      Aucune lecture enregistrée pour le moment.<br>Les lectures de romans, nouvelles et poèmes apparaîtront ici.
+    </div>
+  ` : `
+    <div class="top-writings-list">
+      ${topList.slice(0, 8).map(item => {
+        const pct = Math.max(12, Math.round((item.count / maxViews) * 100));
+        const catLabel = item.category ? (CATEGORIES_LABELS[item.category] || item.category) : '';
+        return `
+          <div class="top-writing-row">
+            <div class="top-row-header">
+              <span class="top-writing-title" title="${escapeHtml(item.title)}">
+                ${escapeHtml(item.title)}
+                ${catLabel ? `<span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:6px;">(${escapeHtml(catLabel)})</span>` : ''}
+              </span>
+              <span class="top-writing-count">${item.count} lecture${item.count > 1 ? 's' : ''}</span>
+            </div>
+            <div class="top-progress-bar-bg">
+              <div class="top-progress-bar-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  const eventsHtml = events.length === 0 ? `
+    <div style="padding: 28px 12px; text-align: center; color: var(--text-muted); font-size: 0.88rem; font-style: italic;">
+      Aucun événement récent dans le journal.<br>Les futures visites, lectures et téléchargements apparaîtront en direct.
+    </div>
+  ` : `
+    <div class="timeline-feed">
+      ${events.slice(0, 40).map(evt => {
+        let icon = '🌐';
+        let actionLabel = 'Visite de la vitrine';
+        if (evt.type === 'read_pdf') {
+          icon = '📖';
+          actionLabel = 'Lecture PDF';
+        } else if (evt.type === 'read_poetry') {
+          icon = '✍️';
+          actionLabel = 'Lecture Poésie';
+        } else if (evt.type === 'play_fiction') {
+          icon = '🧭';
+          actionLabel = 'Partie lancée';
+        } else if (evt.type === 'download_pdf') {
+          icon = '📥';
+          actionLabel = 'Téléchargement PDF';
+        } else if (evt.type === 'download_app') {
+          icon = '💻';
+          actionLabel = 'Téléchargement App';
+        }
+
+        const targetTitle = evt.title || (evt.writingId && writingsById[evt.writingId] ? writingsById[evt.writingId].title : 'Contenu');
+        const timeAgo = formatAnalyticsRelativeTime(evt.timestamp);
+        const devicePill = evt.device ? `<span class="event-pill">${evt.device === 'Mobile' ? '📱' : evt.device === 'Tablette' ? '📱' : '💻'} ${escapeHtml(evt.device)}</span>` : '';
+        const isInsta = evt.source && String(evt.source).toLowerCase().includes('instagram');
+        const sourcePill = evt.source ? `<span class="event-pill ${isInsta ? 'instagram' : ''}">${isInsta ? '📸 Instagram' : escapeHtml(evt.source)}</span>` : '';
+
+        return `
+          <div class="timeline-event-item">
+            <span class="event-icon-badge">${icon}</span>
+            <div class="event-details">
+              <div class="event-header-line">
+                <span class="event-target-title" title="${escapeHtml(targetTitle)}">
+                  <strong>${actionLabel}</strong> : ${escapeHtml(targetTitle)}
+                </span>
+                <span class="event-time-stamp">${timeAgo}</span>
+              </div>
+              <div class="event-meta-line">
+                ${devicePill}
+                ${sourcePill}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  container.innerHTML = `
+    <div class="analytics-container">
+      <div class="analytics-top-bar">
+        <div class="analytics-sync-pill">
+          <span class="analytics-sync-dot"></span>
+          <span>Données en direct (Supabase Cloud)</span>
+          <span style="opacity:0.6;">•</span>
+          <span>Dernière synchro : ${timeFormatted}</span>
+        </div>
+        <div>
+          <button type="button" class="btn-sm-action" id="btnRefreshAnalytics" onclick="renderAdminAnalytics(true)">
+            🔄 Actualiser les données
+          </button>
+        </div>
+      </div>
+
+      <!-- Grille des 4 indicateurs clés -->
+      <div class="analytics-kpi-grid">
+        <div class="analytics-kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Visites du site</span>
+            <span class="kpi-icon">🌐</span>
+          </div>
+          <div class="kpi-val">${totalVisits.toLocaleString('fr-FR')}</div>
+          <span class="kpi-subtext">Visiteurs uniques / sessions</span>
+        </div>
+
+        <div class="analytics-kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Lectures d'écrits</span>
+            <span class="kpi-icon">📖</span>
+          </div>
+          <div class="kpi-val">${totalReads.toLocaleString('fr-FR')}</div>
+          <span class="kpi-subtext">Romans, nouvelles, poèmes & jeux</span>
+        </div>
+
+        <div class="analytics-kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Téléchargements</span>
+            <span class="kpi-icon">📥</span>
+          </div>
+          <div class="kpi-val">${totalDownloads.toLocaleString('fr-FR')}</div>
+          <span class="kpi-subtext">PDFs & applications hors-ligne</span>
+        </div>
+
+        <div class="analytics-kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Écrits consultés</span>
+            <span class="kpi-icon">✨</span>
+          </div>
+          <div class="kpi-val">${distinctReadCount.toLocaleString('fr-FR')}</div>
+          <span class="kpi-subtext">Titres distincts ouverts</span>
+        </div>
+      </div>
+
+      <!-- Grille en 2 colonnes : Top écrits & Timeline d'activité -->
+      <div class="analytics-dual-grid">
+        <div class="analytics-panel-box">
+          <h4 class="panel-box-title">
+            <span>🏆 Top des écrits les plus lus</span>
+            <span style="font-size:0.78rem; font-weight:normal; color:var(--text-muted);">${topList.length} texte${topList.length > 1 ? 's' : ''}</span>
+          </h4>
+          ${topWritingsHtml}
+        </div>
+
+        <div class="analytics-panel-box">
+          <h4 class="panel-box-title">
+            <span>⏱️ Journal d'activité en temps réel</span>
+            <span style="font-size:0.78rem; font-weight:normal; color:var(--text-muted);">Quoi & quand en direct</span>
+          </h4>
+          ${eventsHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initAdminAnalytics() {
+  const accordion = document.getElementById('adminAnalyticsAccordion');
+  if (accordion) {
+    accordion.addEventListener('toggle', () => {
+      if (accordion.open) {
+        renderAdminAnalytics(true);
+      }
+    });
+  }
+}
+
+function initSessionAnalyticsTracking() {
+  // Ignorer si auteur connecté
+  if (localStorage.getItem('caddrillage_logged_in') === 'true') return;
+
+  const alreadyTracked = sessionStorage.getItem('caddrillage_session_tracked');
+  if (alreadyTracked) return;
+
+  sessionStorage.setItem('caddrillage_session_tracked', 'true');
+  const source = getAnalyticsReferrerSource();
+  const device = getAnalyticsDevice();
+  trackAnalyticsEvent({
+    type: 'visit',
+    title: 'Visite de la vitrine',
+    source,
+    device
+  });
 }
 
 // =========================================================
@@ -7376,6 +7993,18 @@ function openDownloadAppModal() {
     if (subtextEl) subtextEl.textContent = 'Package APK installable directement sur votre téléphone';
   }
 
+  if (mainBtn && !mainBtn.dataset.analyticsAttached) {
+    mainBtn.dataset.analyticsAttached = 'true';
+    mainBtn.addEventListener('click', () => {
+      if (typeof trackAnalyticsEvent === 'function') {
+        trackAnalyticsEvent({
+          type: 'download_app',
+          title: `Application hors-ligne (${detectUserPlatform()})`
+        });
+      }
+    });
+  }
+
   // Configuration de la carte de mise à jour dédiée
   const inApp = isRunningInApp();
   const updateBadge = document.getElementById('appUpdateBadge');
@@ -7460,6 +8089,12 @@ async function handleUpdateAppClick() {
     }, 1200);
 
     showToast("Téléchargement de la mise à jour lancé !", "🚀");
+    if (typeof trackAnalyticsEvent === 'function') {
+      trackAnalyticsEvent({
+        type: 'download_app',
+        title: `Mise à jour application (${currentOS})`
+      });
+    }
     if (hintEl) {
       hintEl.textContent = `Fichier téléchargé : ${fileName}. Ouvrez-le pour appliquer la nouvelle version sur votre appareil.`;
       hintEl.style.color = "var(--accent)";
@@ -7996,7 +8631,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initAdminExport();
   initAboutSection();
   initAdminDashboardStats();
+  initAdminAnalytics();
   initSiteStatusControl();
+  initSessionAnalyticsTracking();
 
   // 4. Navigation des catégories
   const categoryTabs = document.querySelectorAll('.category-tab');

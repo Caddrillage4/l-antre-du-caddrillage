@@ -82,6 +82,23 @@ def sync_seed():
         except Exception as e_s:
             print(f"ℹ️  Configuration distante non mise à jour ({e_s}). Le fichier existant est conservé.")
 
+        # 3. Synchronisation des données de fréquentation (site_analytics.json)
+        print("3. Synchronisation des données d'analytics (site_analytics.json)...")
+        analytics_output_path = os.path.join(script_dir, "site_analytics.json")
+        analytics_url = f"{SUPABASE_URL}/storage/v1/object/public/pdfs/site_analytics.json"
+        try:
+            req_analytics = urllib.request.Request(analytics_url, headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}"
+            })
+            with urllib.request.urlopen(req_analytics, timeout=6) as resp_a:
+                analytics_data = json.loads(resp_a.read().decode())
+            with open(analytics_output_path, "w", encoding="utf-8") as f_a:
+                json.dump(analytics_data, f_a, ensure_ascii=False, indent=2)
+            print("✓ Succès : site_analytics.json synchronisé et mis à jour !")
+        except Exception as e_a:
+            print(f"ℹ️  Analytics distants ({e_a}). Le fichier existant est conservé.")
+
         return 0
         
     except Exception as e:
