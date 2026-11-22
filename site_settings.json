@@ -2,12 +2,107 @@
   "siteTitle": "L'antre du caddrillage",
   "siteTagline": "Recueil d'écrits, fictions et pensées littéraires",
   "aboutText": "La section « à propos »... Sûrement la chose la plus intimidante de tout le site (pour son concepteur). Les auteurs sont en général très bons pour décrire le monde, le mouvement, les dynamiques sociales et le critiquer, mais dès qu’il faut tourner son regard vers l’intérieur, les choses deviennent très vite plus compliquées.\n\n« Oh non », je n’ai pas envie de parler de moi, ne me regardez pas, ne m’accordez pas d’attention. Mais au final, si on creuse au fond de la démarche, écrire est déjà quelque chose de narcissique. Certains veulent exposer leur vision du monde, d’autres veulent figer leur propre pensée pour se sentir un peu immortels ; quelques-uns cherchent même la gloire, le succès, la prestance, surtout en France où la culture met l’écrivain sur un piédestal doré.\n\nAlors, comme tout le monde, je ressens une grande gêne à écrire ce pavé qui m’est dédié. Mais maintenant que j’ai posé les premiers mots, on va aller jusqu’au bout, car au final, j’ai déjà fait tout un site, puis tout son contenu. Alors, parler de moi sans tous ces artifices, sans se planquer derrière un personnage, sans dissimuler mes opinions dans la morale des chutes : c’est peut-être pas plus mal.\n\nPour me présenter rapidement : je m’appelle Mathias, je suis né en 2005 et j’ai monté ce site en 2026, à 20 ans, pour y stocker et y faire paraître mes écrits, qui commençaient à être nombreux. L'idée était de récolter des avis mais aussi d’avoir un portfolio personnel, ce qui est toujours pratique.\n\nVous trouverez ici un peu de tout, allant du plus grand des pavés à la plus courte des brèves.\n\nCôté univers et genres : Ils sont nombreux. J’utilise l’écriture comme un terrain de jeu ou une simulation intellectuelle dans laquelle je teste tout type de situations, plus rocambolesques les unes que les autres. Vous trouverez donc de la science-fiction, de l’horreur crasseuse, de la satire, des récits sociaux, des épopées absurdes ou des balades contemplatives.\n\nCette grande polyvalence me donne un style assez intangible et difficile à saisir, qui change beaucoup d’un texte à l’autre. Néanmoins, mes quelques bêta-lecteurs qui m’ont fait le généreux don de leur temps (la ressource la plus capitale et la plus importante) m’ont donné une idée vague de ce qu’un regard extérieur pourra y trouver.\n\nApparemment, vous trouverez un style « mélangeant la trivialité et le banal le plus crasseux de ce monde avec un souffle et une intention plus grande, voire transcendantale, cosmique ».\n\nTrès pompeux dit comme ça, et je pense que ça l’est sans doute un peu. Si vous pensez que cette description du style ne me correspond pas et que mes bêta-lecteurs me mentent pour me faire plaisir, n’hésitez pas à m’envoyer un commentaire incendié pour me le signaler : je le lirai rapidement.\n\nVoilà pour ce qui est de ce paragraphe de présentation des plus pas-originales :-D (admirez comme j’ai pris l’exercice à contre-pied en l'interrogeant lui-même, tout le monde fait ça)\n\n« Nul n'a jamais écrit ou peint, sculpté, modelé, construit, inventé, que pour sortir en fait de l'enfer. »\n— Antonin Artaud, Van Gogh, le Suicidé de la société\n\nPS : la petite citation sur l’artiste maudit pour refermer le cliché. La cerise sur le gâteau 🍰👌",
-  "showAppDownloadBtn": true,
-  "customThemes": null,
-  "customBuilds": null,
-  "updatedAt": 1793368000000,
+  "showAppDownloadBtn": false,
+  "customThemes": {
+    "dark": {
+      "title": "Sombre",
+      "badge": "Défaut",
+      "desc": "Fond anthracite feutré et contrastes doux. Reposant pour les yeux."
+    },
+    "white": {
+      "title": "Clair",
+      "badge": "",
+      "desc": "Luminosité épurée et papier blanc contemporain. Idéal en plein jour."
+    },
+    "galaxy": {
+      "title": "Galaxie",
+      "badge": "Cosmique",
+      "desc": "Immersion stellaire sous les nébuleuses et l'infini cosmique."
+    },
+    "oled": {
+      "title": "OLED",
+      "badge": "Éco-batterie",
+      "desc": "Noir absolu 100%. Éteint les pixels des écrans OLED pour un contraste parfait."
+    },
+    "xp": {
+      "title": "XP",
+      "badge": "Nostalgie",
+      "desc": "La légendaire colline verdoyante sous une voûte céleste étoilée."
+    },
+    "caddri": {
+      "title": "Caddri",
+      "badge": "Signature",
+      "desc": "Quadrillage d'écolier noir et blanc, hommage direct à l'Antre du caddrillage."
+    },
+    "forest": {
+      "title": "Forêt",
+      "badge": "Nature",
+      "desc": "Sentier de mousse et sapins centenaires. Mystique et contemplatif."
+    },
+    "parchemin": {
+      "title": "Parchemin",
+      "badge": "Manuscrit",
+      "desc": "Texture de vieux papier kraft froissé et encres chaudes. Très chaleureux."
+    },
+    "matrix": {
+      "title": "Matrix",
+      "badge": "Cyber",
+      "desc": "Pluie de code vert néon avec décodage progressif en cascade de vos textes."
+    },
+    "backroom": {
+      "title": "Backroom",
+      "badge": "Liminal",
+      "desc": "Labyrinthe infini de pièces jaunâtres et bourdonnement fluorescent. Étrange et mystérieux."
+    },
+    "halloween": {
+      "title": "Halloween 2026",
+      "badge": "Saisonnier",
+      "desc": "Brume nocturne et citrouille d'automne. De discrets petits spectres dérivent dans la nuit."
+    },
+    "noel": {
+      "title": "Noël 2026",
+      "badge": "Fêtes & Hiver",
+      "desc": "Bleu glacé étincelant, guirlandes lumineuses festives autour des cartes et douce tombée de neige."
+    }
+  },
+  "customBuilds": {
+    "modalTitle": "L'antre du caddrillage — Application",
+    "modalSubtitle": "Accédez à tous vos écrits hors-ligne avec confort maximal",
+    "modalBanner": "",
+    "platforms": {
+      "macos": {
+        "title": "macOS (Apple Silicon & Intel)",
+        "subtitle": "macOS 11 Big Sur, Monterey, Ventura, Sonoma, Sequoia+",
+        "desc": "Application native Cocoa / WebKit 64-bit arm64 & x86_64. Aucune dépendance externe, fluide et économe.",
+        "heroTitle": "Application native pour macOS",
+        "heroDesc": "Application native ultra-rapide optimisée pour Apple Silicon (M1, M2, M3, M4). Fonctionne à 100% sans connexion internet avec tous les écrits intégrés."
+      },
+      "windows": {
+        "title": "Windows (10 & 11)",
+        "subtitle": "Architecture x64 / x86",
+        "desc": "Exécutable autonome Windows avec WebView2 natif. Conserve tous vos écrits hors-ligne et se synchronise dès que le réseau est disponible.",
+        "heroTitle": "Application autonome pour Windows",
+        "heroDesc": "Installateur et version portable optimisés pour Windows 10 et 11. 100% autonome et hors-ligne avec liseuse intégrée."
+      },
+      "linux": {
+        "title": "Linux (.AppImage / WebKitGTK)",
+        "subtitle": "Ubuntu, Debian, Fedora, Arch Linux...",
+        "desc": "Format universel sans installation. Fonctionne sur toutes les distributions Linux récentes.",
+        "heroTitle": "Application autonome pour Linux",
+        "heroDesc": "Format universel .AppImage / WebKitGTK sans installation, prêt à tourner sur Ubuntu, Debian, Fedora, Arch Linux."
+      },
+      "android": {
+        "title": "Android (.apk)",
+        "subtitle": "Smartphones & tablettes Android 8.0+",
+        "desc": "Application mobile complète avec icône dédiée. Lisez tous les romans, nouvelles et poèmes hors-ligne sur votre téléphone.",
+        "heroTitle": "Application mobile Android (.apk)",
+        "heroDesc": "Application mobile complète pour smartphones et tablettes (Android 8.0+). 100% autonome et hors-ligne avec liseuse intégrée."
+      }
+    }
+  },
   "siteDisabled": false,
   "favoriteBadgeText": "Favori",
   "favoriteWritingIds": [],
-  "favoriteCustomBadges": {}
+  "favoriteCustomBadges": {},
+  "updatedAt": 1795336747997
 }

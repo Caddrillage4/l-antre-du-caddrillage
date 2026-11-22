@@ -3633,6 +3633,24 @@ function downloadPdfFile(writing) {
 
 let currentInteractiveWriting = null;
 let activeInteractiveBlobUrl = null;
+let activeInteractiveBlobUrls = [];
+
+function revokeInteractiveBlobUrls() {
+  if (Array.isArray(activeInteractiveBlobUrls)) {
+    for (const url of activeInteractiveBlobUrls) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {}
+    }
+    activeInteractiveBlobUrls = [];
+  }
+  if (activeInteractiveBlobUrl) {
+    try {
+      URL.revokeObjectURL(activeInteractiveBlobUrl);
+    } catch (e) {}
+    activeInteractiveBlobUrl = null;
+  }
+}
 
 /**
  * Injecte un bouton flottant élégant "Sortir de la fiction interactive"
@@ -3728,6 +3746,528 @@ function ensureExitButtonInTwineHtml(htmlContent) {
   }
 }
 
+const VFS_MIME_TYPES = {
+  // Audio
+  'mp3': 'audio/mpeg',
+  'ogg': 'audio/ogg',
+  'oga': 'audio/ogg',
+  'wav': 'audio/wav',
+  'm4a': 'audio/mp4',
+  'aac': 'audio/aac',
+  'flac': 'audio/flac',
+  'weba': 'audio/webm',
+  'mid': 'audio/midi',
+  'midi': 'audio/midi',
+  // Video
+  'mp4': 'video/mp4',
+  'webm': 'video/webm',
+  'ogv': 'video/ogg',
+  'mov': 'video/quicktime',
+  // Images
+  'png': 'image/png',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'gif': 'image/gif',
+  'webp': 'image/webp',
+  'svg': 'image/svg+xml',
+  'ico': 'image/x-icon',
+  'bmp': 'image/bmp',
+  'avif': 'image/avif',
+  // Fonts
+  'woff2': 'font/woff2',
+  'woff': 'font/woff',
+  'ttf': 'font/ttf',
+  'otf': 'font/otf',
+  'eot': 'application/vnd.ms-fontobject',
+  // Web & Documents
+  'css': 'text/css; charset=utf-8',
+  'js': 'text/javascript; charset=utf-8',
+  'mjs': 'text/javascript; charset=utf-8',
+  'json': 'application/json; charset=utf-8',
+  'xml': 'application/xml; charset=utf-8',
+  'txt': 'text/plain; charset=utf-8',
+  'html': 'text/html; charset=utf-8',
+  'htm': 'text/html; charset=utf-8'
+};
+
+function getVfsMimeType(filename) {
+  const ext = (filename || '').split('.').pop().toLowerCase();
+  return VFS_MIME_TYPES[ext] || 'application/octet-stream';
+}
+
+function buildVfsRuntimeInterceptorScript(vfsMap) {
+  const jsonMap = JSON.stringify(vfsMap || {});
+  return `<script id="antre-vfs-interceptor">
+(function() {
+  if (window.__antreVfsActive) return;
+  window.__antreVfsActive = true;
+
+  var VFS = ${jsonMap};
+
+  function normalizePath(url) {
+    if (!url || typeof url !== 'string') return '';
+    var clean = url;
+    try {
+      if (clean.indexOf('blob:') === 0 || clean.indexOf('http://') === 0 || clean.indexOf('https://') === 0) {
+        var u = new URL(clean);
+        clean = u.pathname.replace(/^\\/+/, '');
+      }
+    } catch (e) {
+      clean = url.replace(/^blob:[^/]+\\//, '').replace(/^https?:\\/\\/[^/]+\\//, '');
+    }
+    clean = clean.split('?')[0].split('#')[0];
+    clean = clean.replace(/^(\\.\\/|\\/)/, '');
+    return clean;
+  }
+
+  function resolveVfs(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (url.indexOf('data:') === 0) return url;
+    if (VFS[url]) return VFS[url];
+
+    var clean = normalizePath(url);
+    if (!clean) return url;
+    if (VFS[clean]) return VFS[clean];
+
+    var decoded = clean;
+    try { decoded = decodeURIComponent(clean); } catch(e) {}
+    if (VFS[decoded]) return VFS[decoded];
+
+    var baseName = decoded.split('/').pop();
+    if (VFS[baseName]) return VFS[baseName];
+
+    var lowerClean = clean.toLowerCase();
+    if (VFS[lowerClean]) return VFS[lowerClean];
+
+    var lowerBase = baseName.toLowerCase();
+    if (VFS[lowerBase]) return VFS[lowerBase];
+
+    return url;
+  }
+
+  window.__antreResolveVfs = resolveVfs;
+
+  // 1. Hook window.Audio
+  if (typeof window.Audio !== 'undefined') {
+    var OrigAudio = window.Audio;
+    window.Audio = function(src) {
+      if (arguments.length > 0 && typeof src === 'string') {
+        return new OrigAudio(resolveVfs(src));
+      }
+      return new OrigAudio.apply(this, arguments);
+    };
+    window.Audio.prototype = OrigAudio.prototype;
+  }
+
+  // 2. Hook HTMLMediaElement.prototype.src
+  try {
+    var mediaProto = window.HTMLMediaElement ? window.HTMLMediaElement.prototype : null;
+    if (mediaProto) {
+      var origSrcDesc = Object.getOwnPropertyDescriptor(mediaProto, 'src');
+      if (origSrcDesc && origSrcDesc.set) {
+        Object.defineProperty(mediaProto, 'src', {
+          get: function() { return origSrcDesc.get.call(this); },
+          set: function(val) { origSrcDesc.set.call(this, resolveVfs(val)); },
+          configurable: true,
+          enumerable: true
+        });
+      }
+    }
+  } catch(e) {}
+
+  // 3. Hook HTMLIFrameElement.prototype.src
+  try {
+    var iframeProto = window.HTMLIFrameElement ? window.HTMLIFrameElement.prototype : null;
+    if (iframeProto) {
+      var origIframeSrcDesc = Object.getOwnPropertyDescriptor(iframeProto, 'src');
+      if (origIframeSrcDesc && origIframeSrcDesc.set) {
+        Object.defineProperty(iframeProto, 'src', {
+          get: function() { return origIframeSrcDesc.get.call(this); },
+          set: function(val) {
+            try {
+              if (!this.getAttribute('allow')) {
+                this.setAttribute('allow', 'autoplay; fullscreen; encrypted-media');
+              }
+            } catch(e) {}
+            origIframeSrcDesc.set.call(this, resolveVfs(val));
+          },
+          configurable: true,
+          enumerable: true
+        });
+      }
+    }
+  } catch(e) {}
+
+  // 4. Hook HTMLImageElement.prototype.src
+  try {
+    var imgProto = window.HTMLImageElement ? window.HTMLImageElement.prototype : null;
+    if (imgProto) {
+      var origImgSrcDesc = Object.getOwnPropertyDescriptor(imgProto, 'src');
+      if (origImgSrcDesc && origImgSrcDesc.set) {
+        Object.defineProperty(imgProto, 'src', {
+          get: function() { return origImgSrcDesc.get.call(this); },
+          set: function(val) { origImgSrcDesc.set.call(this, resolveVfs(val)); },
+          configurable: true,
+          enumerable: true
+        });
+      }
+    }
+  } catch(e) {}
+
+  // 5. Hook HTMLSourceElement.prototype.src
+  try {
+    var sourceProto = window.HTMLSourceElement ? window.HTMLSourceElement.prototype : null;
+    if (sourceProto) {
+      var origSourceSrcDesc = Object.getOwnPropertyDescriptor(sourceProto, 'src');
+      if (origSourceSrcDesc && origSourceSrcDesc.set) {
+        Object.defineProperty(sourceProto, 'src', {
+          get: function() { return origSourceSrcDesc.get.call(this); },
+          set: function(val) { origSourceSrcDesc.set.call(this, resolveVfs(val)); },
+          configurable: true,
+          enumerable: true
+        });
+      }
+    }
+  } catch(e) {}
+
+  // 6. Hook window.fetch
+  if (typeof window.fetch === 'function') {
+    var origFetch = window.fetch;
+    window.fetch = function(input, init) {
+      if (typeof input === 'string') {
+        input = resolveVfs(input);
+      } else if (input && typeof input.url === 'string') {
+        var resolved = resolveVfs(input.url);
+        if (resolved !== input.url) {
+          input = new Request(resolved, input);
+        }
+      }
+      return origFetch.call(this, input, init);
+    };
+  }
+
+  // 7. Hook XMLHttpRequest.prototype.open
+  if (typeof window.XMLHttpRequest !== 'undefined' && window.XMLHttpRequest.prototype) {
+    var origOpen = window.XMLHttpRequest.prototype.open;
+    window.XMLHttpRequest.prototype.open = function(method, url) {
+      var rest = Array.prototype.slice.call(arguments, 2);
+      if (typeof url === 'string') {
+        url = resolveVfs(url);
+      }
+      return origOpen.apply(this, [method, url].concat(rest));
+    };
+  }
+
+  // 8. Déverrouillage automatique de l'autoplay audio au premier geste utilisateur
+  function unlockAutoplay() {
+    try {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx && window.__antreAudioCtx && window.__antreAudioCtx.state === 'suspended') {
+        window.__antreAudioCtx.resume();
+      }
+    } catch(e) {}
+
+    var mediaEls = document.querySelectorAll('audio, video');
+    for (var i = 0; i < mediaEls.length; i++) {
+      var m = mediaEls[i];
+      if (m.paused && m.autoplay) {
+        m.play().catch(function() {});
+      }
+    }
+
+    window.removeEventListener('pointerdown', unlockAutoplay);
+    window.removeEventListener('keydown', unlockAutoplay);
+    window.removeEventListener('click', unlockAutoplay);
+  }
+  window.addEventListener('pointerdown', unlockAutoplay, { passive: true });
+  window.addEventListener('keydown', unlockAutoplay, { passive: true });
+  window.addEventListener('click', unlockAutoplay, { passive: true });
+
+  // 9. Observer pour les éléments injectés dynamiquement dans le DOM
+  function processNode(node) {
+    if (!node || node.nodeType !== 1) return;
+    var tag = node.tagName;
+    if (tag === 'IFRAME') {
+      try {
+        if (!node.getAttribute('allow')) node.setAttribute('allow', 'autoplay; fullscreen; encrypted-media');
+        var s = node.getAttribute('src');
+        if (s) {
+          var res = resolveVfs(s);
+          if (res !== s) node.setAttribute('src', res);
+        }
+      } catch(e) {}
+    } else if (tag === 'AUDIO' || tag === 'VIDEO' || tag === 'IMG' || tag === 'SOURCE') {
+      try {
+        var s2 = node.getAttribute('src');
+        if (s2) {
+          var res2 = resolveVfs(s2);
+          if (res2 !== s2) node.setAttribute('src', res2);
+        }
+      } catch(e) {}
+    } else if (tag === 'LINK') {
+      try {
+        var h = node.getAttribute('href');
+        if (h) {
+          var resH = resolveVfs(h);
+          if (resH !== h) node.setAttribute('href', resH);
+        }
+      } catch(e) {}
+    }
+
+    if (node.querySelectorAll) {
+      var subs = node.querySelectorAll('iframe, audio, video, img, source, link');
+      for (var k = 0; k < subs.length; k++) {
+        processNode(subs[k]);
+      }
+    }
+  }
+
+  if (typeof MutationObserver !== 'undefined') {
+    var observer = new MutationObserver(function(mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var m = mutations[i];
+        if (m.type === 'childList') {
+          for (var j = 0; j < m.addedNodes.length; j++) {
+            processNode(m.addedNodes[j]);
+          }
+        } else if (m.type === 'attributes') {
+          if (m.attributeName === 'src' || m.attributeName === 'href') {
+            var val = m.target.getAttribute(m.attributeName);
+            if (val) {
+              var r = resolveVfs(val);
+              if (r !== val) m.target.setAttribute(m.attributeName, r);
+            }
+          }
+        }
+      }
+    });
+
+    function startObserving() {
+      if (document.documentElement) {
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['src', 'href']
+        });
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startObserving);
+    } else {
+      startObserving();
+    }
+  }
+})();
+<\/script>`;
+}
+
+function rewriteContentReferences(rawContent, vfsMap) {
+  if (!rawContent || typeof rawContent !== 'string') return rawContent;
+  let content = rawContent;
+
+  const keys = Object.keys(vfsMap).sort((a, b) => b.length - a.length);
+
+  for (const key of keys) {
+    if (!key || key.length < 2) continue;
+    const blobUrl = vfsMap[key];
+    if (!blobUrl || blobUrl === key) continue;
+
+    content = content.split(`"${key}"`).join(`"${blobUrl}"`);
+    content = content.split(`'${key}'`).join(`'${blobUrl}'`);
+    content = content.split(`&quot;${key}&quot;`).join(`&quot;${blobUrl}&quot;`);
+    content = content.split(`&#39;${key}&#39;`).join(`&#39;${blobUrl}&#39;`);
+    content = content.split(`url("${key}")`).join(`url("${blobUrl}")`);
+    content = content.split(`url('${key}')`).join(`url('${blobUrl}')`);
+    content = content.split(`url(${key})`).join(`url("${blobUrl}")`);
+    content = content.split(`url(&quot;${key}&quot;)`).join(`url(&quot;${blobUrl}&quot;)`);
+  }
+
+  return content;
+}
+
+function injectScriptIntoHtml(html, scriptTag) {
+  if (!html || typeof html !== 'string') return html;
+  if (html.includes('id="antre-vfs-interceptor"')) return html;
+
+  if (html.includes('<head>')) {
+    return html.replace('<head>', '<head>\n' + scriptTag);
+  } else if (html.includes('<head ')) {
+    return html.replace(/<head[^>]*>/i, (m) => m + '\n' + scriptTag);
+  } else if (html.includes('<html>')) {
+    return html.replace('<html>', '<html>\n<head>\n' + scriptTag + '\n</head>');
+  } else if (html.includes('<html ')) {
+    return html.replace(/<html[^>]*>/i, (m) => m + '\n<head>\n' + scriptTag + '\n</head>');
+  } else {
+    return scriptTag + '\n' + html;
+  }
+}
+
+async function mountInteractiveFictionZip(file) {
+  if (!window.JSZip) {
+    throw new Error("Bibliothèque JSZip non disponible.");
+  }
+
+  const zip = await JSZip.loadAsync(file);
+
+  const isIgnored = (name) => {
+    return name.includes('__MACOSX') || name.split('/').pop().startsWith('.') || name.endsWith('/');
+  };
+
+  const validEntries = [];
+  for (const filename in zip.files) {
+    const entry = zip.files[filename];
+    if (!entry.dir && !isIgnored(filename)) {
+      validEntries.push(entry);
+    }
+  }
+
+  if (validEntries.length === 0) {
+    throw new Error("L'archive ZIP ne contient aucun fichier exploitable.");
+  }
+
+  // Détection d'un dossier racine englobant éventuel (ex: "Projet Delfort copie 2/")
+  let commonPrefix = '';
+  const firstSlashIndex = validEntries[0].name.indexOf('/');
+  if (firstSlashIndex !== -1) {
+    const candidate = validEntries[0].name.substring(0, firstSlashIndex + 1);
+    if (validEntries.every(e => e.name.startsWith(candidate))) {
+      commonPrefix = candidate;
+    }
+  }
+
+  const htmlEntries = [];
+  let tweeEntry = null;
+  const assetEntries = [];
+
+  for (const entry of validEntries) {
+    const lower = entry.name.toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      htmlEntries.push(entry);
+    } else if (lower.endsWith('.twee') && !tweeEntry) {
+      tweeEntry = entry;
+    } else {
+      assetEntries.push(entry);
+    }
+  }
+
+  if (htmlEntries.length === 0) {
+    throw new Error("Aucun fichier HTML trouvé dans l'archive ZIP.");
+  }
+
+  // Détection de l'HTML principal
+  let mainHtmlEntry = null;
+  for (const entry of htmlEntries) {
+    const textSample = await entry.async('string');
+    if (textSample.includes('<tw-storydata')) {
+      mainHtmlEntry = entry;
+      break;
+    }
+  }
+  if (!mainHtmlEntry) {
+    for (const entry of htmlEntries) {
+      const base = entry.name.split('/').pop().toLowerCase();
+      if (base === 'index.html' || base === 'index.htm') {
+        mainHtmlEntry = entry;
+        break;
+      }
+    }
+  }
+  if (!mainHtmlEntry) {
+    mainHtmlEntry = htmlEntries[0];
+  }
+
+  const secondaryHtmlEntries = htmlEntries.filter(e => e !== mainHtmlEntry);
+  const vfsMap = {};
+  const createdUrls = [];
+
+  const registerVfsKey = (rawPath, blobUrl) => {
+    if (!rawPath || !blobUrl) return;
+    const clean = rawPath.replace(/^(\.\/|\/)/, '');
+    const base = clean.split('/').pop();
+    vfsMap[rawPath] = blobUrl;
+    vfsMap[clean] = blobUrl;
+    vfsMap[base] = blobUrl;
+    vfsMap[`./${clean}`] = blobUrl;
+    vfsMap[`./${base}`] = blobUrl;
+    vfsMap[`/${clean}`] = blobUrl;
+    vfsMap[`/${base}`] = blobUrl;
+    vfsMap[clean.toLowerCase()] = blobUrl;
+    vfsMap[base.toLowerCase()] = blobUrl;
+    try {
+      vfsMap[encodeURI(clean)] = blobUrl;
+      vfsMap[encodeURIComponent(base)] = blobUrl;
+    } catch(e) {}
+
+    if (commonPrefix && rawPath.startsWith(commonPrefix)) {
+      const withoutPrefix = rawPath.substring(commonPrefix.length);
+      vfsMap[withoutPrefix] = blobUrl;
+      vfsMap[`./${withoutPrefix}`] = blobUrl;
+      vfsMap[`/${withoutPrefix}`] = blobUrl;
+      vfsMap[withoutPrefix.toLowerCase()] = blobUrl;
+      try { vfsMap[encodeURI(withoutPrefix)] = blobUrl; } catch(e) {}
+    }
+  };
+
+  // PASSE 1 : Tous les médias, sons, vidéos, polices, styles et scripts
+  for (const entry of assetEntries) {
+    const mimeType = getVfsMimeType(entry.name);
+    const arrayBuffer = await entry.async('arraybuffer');
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    const blobUrl = URL.createObjectURL(blob);
+    createdUrls.push(blobUrl);
+    activeInteractiveBlobUrls.push(blobUrl);
+    registerVfsKey(entry.name, blobUrl);
+  }
+
+  // Intercepteur pour les pages secondaires (iframes enfants)
+  const interceptorPass2 = buildVfsRuntimeInterceptorScript(vfsMap);
+
+  // PASSE 2 : Pages HTML secondaires (ex: PelfortOS.html)
+  for (const entry of secondaryHtmlEntries) {
+    let subHtml = await entry.async('string');
+    subHtml = rewriteContentReferences(subHtml, vfsMap);
+    subHtml = injectScriptIntoHtml(subHtml, interceptorPass2);
+    const subBlob = new Blob([subHtml], { type: 'text/html; charset=utf-8' });
+    const subBlobUrl = URL.createObjectURL(subBlob);
+    createdUrls.push(subBlobUrl);
+    activeInteractiveBlobUrls.push(subBlobUrl);
+    registerVfsKey(entry.name, subBlobUrl);
+  }
+
+  // PASSE 3 : Histoire Twine principale
+  let mainHtml = await mainHtmlEntry.async('string');
+  mainHtml = rewriteContentReferences(mainHtml, vfsMap);
+  const finalInterceptor = buildVfsRuntimeInterceptorScript(vfsMap);
+  mainHtml = injectScriptIntoHtml(mainHtml, finalInterceptor);
+  mainHtml = ensureExitButtonInTwineHtml(mainHtml);
+
+  const mainBlob = new Blob([mainHtml], { type: 'text/html; charset=utf-8' });
+  const mainBlobUrl = URL.createObjectURL(mainBlob);
+  createdUrls.push(mainBlobUrl);
+  activeInteractiveBlobUrls.push(mainBlobUrl);
+
+  let tweeContent = '';
+  let tweeFilename = '';
+  if (tweeEntry) {
+    tweeFilename = tweeEntry.name.split('/').pop();
+    tweeContent = await tweeEntry.async('string');
+  }
+
+  const mainFilename = mainHtmlEntry.name.split('/').pop();
+
+  return {
+    mainBlobUrl,
+    mainHtml,
+    htmlFilename: mainFilename,
+    tweeContent,
+    tweeFilename,
+    zipFile: file,
+    blobUrls: createdUrls
+  };
+}
+
 async function processTwineZipFile(file) {
   if (!window.JSZip) {
     throw new Error("Bibliothèque JSZip non disponible.");
@@ -3735,46 +4275,64 @@ async function processTwineZipFile(file) {
 
   const zip = await JSZip.loadAsync(file);
 
-  let htmlFilename = null;
-  let htmlFileObj = null;
-
-  // Ignorer les fichiers système et métadonnées AppleDouble (__MACOSX/, ._*, .DS_Store)
   const isIgnored = (name) => {
-    return name.includes('__MACOSX') || name.split('/').pop().startsWith('.');
+    return name.includes('__MACOSX') || name.split('/').pop().startsWith('.') || name.endsWith('/');
   };
 
-  // 1. Chercher un fichier index.html
+  const validEntries = [];
   for (const filename in zip.files) {
-    if (!zip.files[filename].dir && !isIgnored(filename) && filename.toLowerCase().endsWith('index.html')) {
-      htmlFilename = filename;
-      htmlFileObj = zip.files[filename];
-      break;
+    const entry = zip.files[filename];
+    if (!entry.dir && !isIgnored(filename)) {
+      validEntries.push(entry);
     }
   }
 
-  // 2. Sinon le premier .html ou .htm valide trouvé
-  if (!htmlFileObj) {
-    for (const filename in zip.files) {
-      if (!zip.files[filename].dir && !isIgnored(filename) && (filename.toLowerCase().endsWith('.html') || filename.toLowerCase().endsWith('.htm'))) {
-        htmlFilename = filename;
-        htmlFileObj = zip.files[filename];
+  if (validEntries.length === 0) {
+    throw new Error("L'archive ZIP ne contient aucun fichier exploitable.");
+  }
+
+  let htmlEntries = [];
+  let tweeEntry = null;
+
+  for (const entry of validEntries) {
+    const lower = entry.name.toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      htmlEntries.push(entry);
+    } else if (lower.endsWith('.twee') && !tweeEntry) {
+      tweeEntry = entry;
+    }
+  }
+
+  if (htmlEntries.length === 0) {
+    throw new Error("Aucun fichier HTML trouvé dans l'archive ZIP.");
+  }
+
+  let mainHtmlEntry = null;
+  for (const entry of htmlEntries) {
+    const textSample = await entry.async('string');
+    if (textSample.includes('<tw-storydata')) {
+      mainHtmlEntry = entry;
+      break;
+    }
+  }
+  if (!mainHtmlEntry) {
+    for (const entry of htmlEntries) {
+      const base = entry.name.split('/').pop().toLowerCase();
+      if (base === 'index.html' || base === 'index.htm') {
+        mainHtmlEntry = entry;
         break;
       }
     }
   }
-
-  if (!htmlFileObj) {
-    throw new Error("Aucun fichier HTML trouvé dans l'archive ZIP.");
+  if (!mainHtmlEntry) {
+    mainHtmlEntry = htmlEntries[0];
   }
 
-  let htmlContent = await htmlFileObj.async('string');
+  let htmlContent = await mainHtmlEntry.async('string');
 
-  // Convertir les images du zip en Data URI pour affichage autonome 100% hors-ligne
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
-  for (const filename in zip.files) {
-    const entry = zip.files[filename];
-    if (entry.dir || isIgnored(filename)) continue;
-    const lowerName = filename.toLowerCase();
+  for (const entry of validEntries) {
+    const lowerName = entry.name.toLowerCase();
     const isImage = imageExtensions.some(ext => lowerName.endsWith(ext));
 
     if (isImage) {
@@ -3787,10 +4345,9 @@ async function processTwineZipFile(file) {
       const base64Data = await entry.async('base64');
       const dataUri = `data:${mimeType};base64,${base64Data}`;
 
-      const cleanPath = filename.replace(/^(\.\/|\/)/, '');
+      const cleanPath = entry.name.replace(/^(\.\/|\/)/, '');
       const baseName = cleanPath.split('/').pop();
 
-      // Remplacement multi-niveaux des chemins relatifs (chemin complet, basename, encodé)
       htmlContent = htmlContent.split(cleanPath).join(dataUri);
       if (baseName !== cleanPath) {
         htmlContent = htmlContent.split(baseName).join(dataUri);
@@ -3802,24 +4359,18 @@ async function processTwineZipFile(file) {
     }
   }
 
-  // Extraire également le code source .twee s'il est inclus dans le ZIP
   let tweeContent = '';
   let tweeFilename = '';
-  for (const filename in zip.files) {
-    const entry = zip.files[filename];
-    if (!entry.dir && !isIgnored(filename) && filename.toLowerCase().endsWith('.twee')) {
-      tweeFilename = filename.split('/').pop();
-      tweeContent = await entry.async('string');
-      break;
-    }
+  if (tweeEntry) {
+    tweeFilename = tweeEntry.name.split('/').pop();
+    tweeContent = await tweeEntry.async('string');
   }
 
-  // Injecter le bouton de sortie au cas où le HTML extrait est lancé directement en autonome
   htmlContent = ensureExitButtonInTwineHtml(htmlContent);
 
   return {
     htmlContent,
-    htmlFilename: htmlFilename.split('/').pop(),
+    htmlFilename: mainHtmlEntry.name.split('/').pop(),
     tweeContent,
     tweeFilename,
     zipFile: file
@@ -4079,108 +4630,111 @@ async function openInteractiveFictionModal(writing) {
   if (modal) modal.classList.add('active');
   document.body.style.overflow = 'hidden';
 
-  if (activeInteractiveBlobUrl) {
-    URL.revokeObjectURL(activeInteractiveBlobUrl);
-    activeInteractiveBlobUrl = null;
-  }
+  // Révoquer immédiatement les anciens Blob URLs pour libérer la mémoire vive
+  revokeInteractiveBlobUrls();
 
-  let htmlToLoad = writing.htmlContent || '';
+  showLoader("Préparation de la fiction interactive...");
 
-  if (!htmlToLoad) {
-    showLoader("Chargement de la fiction interactive...");
-    try {
-      let sourceBlob = writing.pdfBlob;
+  try {
+    let sourceBlob = writing.zipBlob || writing.pdfBlob || null;
 
-      // Si le blob n'est pas en mémoire, le télécharger depuis l'URL publique de stockage
-      if (!sourceBlob && writing.pdfUrl) {
-        showLoader("Téléchargement du projet...");
-        const resp = await fetch(writing.pdfUrl);
-        if (!resp.ok) throw new Error("Fichier introuvable sur le serveur.");
-        sourceBlob = await resp.blob();
-        writing.pdfBlob = sourceBlob;
-      }
+    // Détection si l'écrit est basé sur une archive ZIP
+    let isZip = (writing.zipBlob !== null && writing.zipBlob !== undefined)
+      || (writing.zipFileName && writing.zipFileName.toLowerCase().endsWith('.zip'))
+      || (writing.pdfFileName && writing.pdfFileName.toLowerCase().endsWith('.zip'))
+      || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'));
 
-      if (sourceBlob) {
-        showLoader("Préparation de l'univers interactif...");
-        const headerBuf = await sourceBlob.slice(0, 4).arrayBuffer();
-        const header = new Uint8Array(headerBuf);
-        const isZip = (header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04)
-          || (writing.pdfFileName && writing.pdfFileName.toLowerCase().endsWith('.zip'))
-          || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'));
-
-        if (isZip) {
-          showLoader("Décompression et intégration des images...");
-          const res = await processTwineZipFile(sourceBlob);
-          htmlToLoad = res.htmlContent;
-          writing.htmlContent = res.htmlContent;
-          writing.htmlFileName = res.htmlFilename;
-          writing.zipBlob = sourceBlob;
-          writing.zipFileName = writing.zipFileName || writing.pdfFileName || `${slugify(writing.title)}.zip`;
-          if (res.tweeContent) {
-            writing.tweeContent = res.tweeContent;
-            writing.tweeFileName = res.tweeFilename;
-          }
-        } else {
-          htmlToLoad = await sourceBlob.text();
-          writing.htmlContent = htmlToLoad;
-          writing.htmlFileName = writing.pdfFileName || `${slugify(writing.title)}.html`;
-        }
-
-        // Sauvegarde locale dans IndexedDB pour que les futurs lancements soient immédiats
-        if (db && db.objectStoreNames.contains(DB_CONFIG.storeName)) {
-          try {
-            const tx = db.transaction([DB_CONFIG.storeName], 'readwrite');
-            tx.objectStore(DB_CONFIG.storeName).put({ ...writing });
-          } catch (cacheErr) {
-            console.warn('Erreur mise en cache locale IndexedDB:', cacheErr);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Erreur chargement fiction interactive:', err);
-      hideLoader();
-      showToast("Impossible d'ouvrir cette fiction interactive : " + err.message, "error");
-      return;
+    // Si le blob n'est pas en mémoire, le télécharger depuis l'URL publique de stockage
+    if (!sourceBlob && writing.pdfUrl) {
+      showLoader("Téléchargement du projet...");
+      const resp = await fetch(writing.pdfUrl);
+      if (!resp.ok) throw new Error("Fichier introuvable sur le serveur.");
+      sourceBlob = await resp.blob();
+      writing.pdfBlob = sourceBlob;
+      if (isZip) writing.zipBlob = sourceBlob;
     }
-  }
 
-  if (dlTweeBtn) {
-    dlTweeBtn.style.display = (writing.tweeFileName || writing.tweeContent) ? 'flex' : 'none';
-  }
-  if (dlZipBtn) {
-    dlZipBtn.style.display = (writing.zipFileName || writing.zipBlob || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'))) ? 'flex' : 'none';
-  }
-
-  if (!htmlToLoad) {
-    hideLoader();
-    showToast('Fichier de jeu introuvable pour cette fiction.', '⚠️');
-    return;
-  }
-
-  if (iframe) {
-    iframe.onload = () => {
-      hideLoader();
-      try {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        if (!iframeDoc) return;
-
-        applyTwineDaStyle(iframeDoc, toggleDa ? toggleDa.checked : false);
-
-        const observer = new MutationObserver(() => {
-          if (toggleDa && toggleDa.checked) {
-            markBlockChoicesInTwine(iframeDoc);
-          }
-        });
-        observer.observe(iframeDoc.body, { childList: true, subtree: true });
-      } catch (e) {
-        console.warn('Accès style DA iframe:', e);
+    // Vérifier les magic bytes PK du blob
+    if (sourceBlob && !isZip) {
+      const headerBuf = await sourceBlob.slice(0, 4).arrayBuffer();
+      const header = new Uint8Array(headerBuf);
+      if (header[0] === 0x50 && header[1] === 0x4B && (header[2] === 0x03 || header[2] === 0x05 || header[2] === 0x07)) {
+        isZip = true;
+        writing.zipBlob = sourceBlob;
       }
-    };
+    }
 
-    htmlToLoad = ensureExitButtonInTwineHtml(htmlToLoad);
-    const blob = new Blob([htmlToLoad], { type: 'text/html; charset=utf-8' });
-    activeInteractiveBlobUrl = URL.createObjectURL(blob);
-    iframe.src = activeInteractiveBlobUrl;
+    let mainUrlToLoad = '';
+
+    if (isZip && sourceBlob) {
+      showLoader("Décompression et montage de l'univers interactif...");
+      const mounted = await mountInteractiveFictionZip(sourceBlob);
+      mainUrlToLoad = mounted.mainBlobUrl;
+      activeInteractiveBlobUrl = mounted.mainBlobUrl;
+      writing.htmlFileName = mounted.htmlFilename;
+      writing.zipBlob = sourceBlob;
+      writing.zipFileName = writing.zipFileName || writing.pdfFileName || `${slugify(writing.title)}.zip`;
+      if (mounted.tweeContent) {
+        writing.tweeContent = mounted.tweeContent;
+        writing.tweeFileName = mounted.tweeFilename;
+      }
+
+      // Sauvegarde dans IndexedDB pour que les futurs lancements soient immédiats
+      if (db && db.objectStoreNames.contains(DB_CONFIG.storeName)) {
+        try {
+          const tx = db.transaction([DB_CONFIG.storeName], 'readwrite');
+          tx.objectStore(DB_CONFIG.storeName).put({ ...writing });
+        } catch (cacheErr) {}
+      }
+    } else {
+      let htmlToLoad = writing.htmlContent || '';
+      if (!htmlToLoad && sourceBlob) {
+        htmlToLoad = await sourceBlob.text();
+        writing.htmlContent = htmlToLoad;
+        writing.htmlFileName = writing.pdfFileName || `${slugify(writing.title)}.html`;
+      }
+      if (!htmlToLoad) throw new Error("Contenu du jeu introuvable.");
+
+      htmlToLoad = ensureExitButtonInTwineHtml(htmlToLoad);
+      const blob = new Blob([htmlToLoad], { type: 'text/html; charset=utf-8' });
+      activeInteractiveBlobUrl = URL.createObjectURL(blob);
+      activeInteractiveBlobUrls.push(activeInteractiveBlobUrl);
+      mainUrlToLoad = activeInteractiveBlobUrl;
+    }
+
+    if (dlTweeBtn) {
+      dlTweeBtn.style.display = (writing.tweeFileName || writing.tweeContent) ? 'flex' : 'none';
+    }
+    if (dlZipBtn) {
+      dlZipBtn.style.display = (isZip || writing.zipFileName || writing.zipBlob || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'))) ? 'flex' : 'none';
+    }
+
+    if (iframe) {
+      iframe.onload = () => {
+        hideLoader();
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          if (!iframeDoc) return;
+
+          applyTwineDaStyle(iframeDoc, toggleDa ? toggleDa.checked : false);
+
+          const observer = new MutationObserver(() => {
+            if (toggleDa && toggleDa.checked) {
+              markBlockChoicesInTwine(iframeDoc);
+            }
+          });
+          observer.observe(iframeDoc.body, { childList: true, subtree: true });
+        } catch (e) {
+          console.warn('Accès style DA iframe:', e);
+        }
+      };
+
+      iframe.src = mainUrlToLoad;
+    }
+  } catch (err) {
+    console.error('Erreur chargement fiction interactive:', err);
+    hideLoader();
+    showToast("Impossible d'ouvrir cette fiction interactive : " + err.message, "error");
   }
 }
 
@@ -4196,10 +4750,7 @@ function closeInteractiveFictionModal() {
   if (container) container.classList.remove('is-fullscreen');
   document.body.style.overflow = '';
 
-  if (activeInteractiveBlobUrl) {
-    URL.revokeObjectURL(activeInteractiveBlobUrl);
-    activeInteractiveBlobUrl = null;
-  }
+  revokeInteractiveBlobUrls();
 }
 
 async function downloadInteractiveFile(writing, type) {

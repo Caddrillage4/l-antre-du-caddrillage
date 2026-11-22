@@ -1,8 +1,414 @@
 {
-  "totalVisits": 0,
-  "totalReads": 0,
+  "totalVisits": 32,
+  "totalReads": 8,
   "totalDownloads": 0,
-  "writingViews": {},
-  "events": [],
-  "lastUpdated": 1792081492210
+  "writingViews": {
+    "1791902266299": 2,
+    "1791901440778": 5,
+    "1793364349676": 1
+  },
+  "events": [
+    {
+      "id": "evt_1795320101353_vl882",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795320101353
+    },
+    {
+      "id": "evt_1795300989496_6cefa",
+      "type": "read_pdf",
+      "title": "Une extinction de plus",
+      "writingId": "1791901440778",
+      "category": "nouvelle-longue",
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1795300989496
+    },
+    {
+      "id": "evt_1795300972927_8i0f7",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1795300972927
+    },
+    {
+      "id": "evt_1795251112355_q4rxy",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795251112355
+    },
+    {
+      "id": "evt_1795112106449_fzy5b",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795112106449
+    },
+    {
+      "id": "evt_1795073622816_1f3mt",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Google",
+      "timestamp": 1795073622816
+    },
+    {
+      "id": "evt_1795036093670_mhfeu",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795036093670
+    },
+    {
+      "id": "evt_1794970632995_eora8",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794970632995
+    },
+    {
+      "id": "evt_1794946940422_t2x7v",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794946940422
+    },
+    {
+      "id": "evt_1794892176867_05on4",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794892176867
+    },
+    {
+      "id": "evt_1794802391922_57zce",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794802391922
+    },
+    {
+      "id": "evt_1794793931119_13t9q",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794793931119
+    },
+    {
+      "id": "evt_1794712584896_bwkfn",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794712584896
+    },
+    {
+      "id": "evt_1794706989810_0shbv",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794706989810
+    },
+    {
+      "id": "evt_1794675878792_jt2lk",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794675878792
+    },
+    {
+      "id": "evt_1794672609291_zhzf5",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794672609291
+    },
+    {
+      "id": "evt_1794672595475_wulg2",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794672595475
+    },
+    {
+      "id": "evt_1794622663963_qta4s",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794622663964
+    },
+    {
+      "id": "evt_1794532702005_epubp",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794532702006
+    },
+    {
+      "id": "evt_1794499811761_xa08o",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794499811761
+    },
+    {
+      "id": "evt_1794499795842_g6jty",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794499795842
+    },
+    {
+      "id": "evt_1794496228712_dyh2h",
+      "type": "read_pdf",
+      "title": "Une extinction de plus",
+      "writingId": "1791901440778",
+      "category": "nouvelle-longue",
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794496228712
+    },
+    {
+      "id": "evt_1794496103637_0tv7f",
+      "type": "play_fiction",
+      "title": "Projet Pelfort (Démo)",
+      "writingId": "1793364349676",
+      "category": "fiction-interactive",
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794496103637
+    },
+    {
+      "id": "evt_1794496077483_dbfy2",
+      "type": "read_pdf",
+      "title": "L'inspecteur Fletcher Hobbles et l'affaire du Flubridge",
+      "writingId": "1791902266299",
+      "category": "roman",
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794496077483
+    },
+    {
+      "id": "evt_1794496050175_0ab9e",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794496050175
+    },
+    {
+      "id": "evt_1794442744851_8ni7h",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794442744851
+    },
+    {
+      "id": "evt_1794356241415_v6aqy",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794356241415
+    },
+    {
+      "id": "evt_1794333136713_jnu2n",
+      "type": "read_pdf",
+      "title": "Une extinction de plus",
+      "writingId": "1791901440778",
+      "category": "nouvelle-longue",
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794333136713
+    },
+    {
+      "id": "evt_1794333129782_8lusi",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794333129782
+    },
+    {
+      "id": "evt_1794269730635_m6rne",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794269730635
+    },
+    {
+      "id": "evt_1794253542906_rgyt3",
+      "type": "read_pdf",
+      "title": "Une extinction de plus",
+      "writingId": "1791901440778",
+      "category": "nouvelle-longue",
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794253542908
+    },
+    {
+      "id": "evt_1794253537034_fro6q",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794253537034
+    },
+    {
+      "id": "evt_1794239114318_x29fv",
+      "type": "read_pdf",
+      "title": "Une extinction de plus",
+      "writingId": "1791901440778",
+      "category": "nouvelle-longue",
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794239114318
+    },
+    {
+      "id": "evt_1794239015593_oyyqh",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794239015593
+    },
+    {
+      "id": "evt_1794238157337_8gdh6",
+      "type": "read_pdf",
+      "title": "L'inspecteur Fletcher Hobbles et l'affaire du Flubridge",
+      "writingId": "1791902266299",
+      "category": "roman",
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794238157337
+    },
+    {
+      "id": "evt_1794238120780_hjjyg",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794238120780
+    },
+    {
+      "id": "evt_1794237934736_0ppih",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794237934737
+    },
+    {
+      "id": "evt_1794230303487_iosne",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Mobile",
+      "source": "Lien direct",
+      "timestamp": 1794230303487
+    },
+    {
+      "id": "evt_1794179739495_sj1cr",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794179739495
+    },
+    {
+      "id": "evt_1794171280546_tvmlw",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1794171280546
+    }
+  ],
+  "lastUpdated": 1792081492210,
+  "updatedAt": 1795320104241
 }
