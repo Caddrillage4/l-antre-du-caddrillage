@@ -14,3 +14,6 @@ test_sym.dmg
 *.app/
 *.dmg
 www/
+releases projet pelfort/
+pelfort_releases.json
+upload_releases.py

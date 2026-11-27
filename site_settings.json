@@ -104,5 +104,14 @@
   "favoriteBadgeText": "Favori",
   "favoriteWritingIds": [],
   "favoriteCustomBadges": {},
-  "updatedAt": 1795336747997
+  "updatedAt": 1795336747997,
+  "interactiveReleases": {
+    "1793364349676": {
+      "macUrl": "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_macOS_Apple_Silicon.dmg",
+      "macIntelUrl": "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_macOS_Intel.dmg",
+      "windowsUrl": "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_Windows_Setup.exe",
+      "windowsPortableUrl": "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_Windows_Portable.exe",
+      "androidUrl": "https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_Android.apk"
+    }
+  }
 }

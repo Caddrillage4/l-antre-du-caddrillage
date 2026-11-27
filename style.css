@@ -2764,6 +2764,90 @@ body.theme-noel .card-category-badge.badge-interactive {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
+/* Bouton et tiroir des versions applications sur les fictions */
+.btn-apps-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-apps-toggle.active {
+  background: var(--surface-active, rgba(56, 189, 248, 0.15));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.card-apps-drawer {
+  display: none;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+  animation: fadeInApps 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-apps-drawer.active {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-apps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-apps-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-apps-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-app-platform {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-app-platform:hover {
+  background: var(--surface-active, rgba(56, 189, 248, 0.15));
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes fadeInApps {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Zone d'upload interactive */
 .interactive-upload-box {
   border-color: var(--accent);
@@ -2772,14 +2856,14 @@ body.theme-noel .card-category-badge.badge-interactive {
 
 /* Modal Lecteur de Fiction Interactive */
 .modal-container.interactive-fiction-modal {
-  max-width: 1200px;
-  width: 96vw;
-  height: 94vh;
+  max-width: 98vw;
+  width: 98vw;
+  height: 97vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
   border: 1px solid var(--border-strong);
   transition: all 0.25s ease;
 }
@@ -2794,7 +2878,7 @@ body.theme-noel .card-category-badge.badge-interactive {
 
 .interactive-fiction-header {
   background: var(--reader-header-bg);
-  padding: 12px 20px;
+  padding: 8px 18px;
   flex-shrink: 0;
   display: flex;
   align-items: center;

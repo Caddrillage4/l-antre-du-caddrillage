@@ -1,13 +1,53 @@
 {
-  "totalVisits": 32,
-  "totalReads": 8,
+  "totalVisits": 35,
+  "totalReads": 9,
   "totalDownloads": 0,
   "writingViews": {
     "1791902266299": 2,
     "1791901440778": 5,
-    "1793364349676": 1
+    "1793364349676": 2
   },
   "events": [
+    {
+      "id": "evt_1795388052503_1ggfh",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795388052503
+    },
+    {
+      "id": "evt_1795380345044_r92k6",
+      "type": "play_fiction",
+      "title": "Projet Pelfort (Démo)",
+      "writingId": "1793364349676",
+      "category": "fiction-interactive",
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795380345047
+    },
+    {
+      "id": "evt_1795341980608_n91eu",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795341980608
+    },
+    {
+      "id": "evt_1795339387204_yvfbz",
+      "type": "visit",
+      "title": "Visite de la vitrine",
+      "writingId": null,
+      "category": null,
+      "device": "Ordinateur",
+      "source": "Lien direct",
+      "timestamp": 1795339387204
+    },
     {
       "id": "evt_1795320101353_vl882",
       "type": "visit",
@@ -410,5 +450,5 @@
     }
   ],
   "lastUpdated": 1792081492210,
-  "updatedAt": 1795320104241
+  "updatedAt": 1795388054791
 }

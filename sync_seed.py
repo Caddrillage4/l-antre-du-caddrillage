@@ -33,17 +33,37 @@ def sync_seed():
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
             
+        # Récupération de la configuration pour les releases des fictions interactives
+        interactive_releases = {}
+        try:
+            settings_url = f"{SUPABASE_URL}/storage/v1/object/public/pdfs/site_settings.json"
+            req_settings = urllib.request.Request(settings_url, headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}"
+            })
+            with urllib.request.urlopen(req_settings, timeout=6) as resp_s:
+                settings_data = json.loads(resp_s.read().decode())
+                interactive_releases = settings_data.get("interactiveReleases", {})
+        except Exception:
+            if os.path.exists(settings_output_path):
+                try:
+                    with open(settings_output_path, "r", encoding="utf-8") as f_s:
+                        interactive_releases = json.load(f_s).get("interactiveReleases", {})
+                except Exception:
+                    pass
+
         formatted = []
         for item in data:
+            item_id = str(item.get("id"))
             tags = item.get("tags") or []
             if isinstance(tags, str):
                 try:
                     tags = json.loads(tags)
                 except Exception:
                     tags = [t.strip() for t in tags.split(",") if t.strip()]
-                    
-            formatted.append({
-                "id": str(item.get("id")),
+
+            writing_dict = {
+                "id": item_id,
                 "title": item.get("title", ""),
                 "category": item.get("category", ""),
                 "summary": item.get("summary", ""),
@@ -58,7 +78,12 @@ def sync_seed():
                 "pdfFileSize": item.get("pdf_size"),
                 "createdAt": item.get("created_at"),
                 "updatedAt": item.get("updated_at")
-            })
+            }
+
+            if item_id in interactive_releases:
+                writing_dict["appReleases"] = interactive_releases[item_id]
+
+            formatted.append(writing_dict)
             
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(formatted, f, ensure_ascii=False, indent=2)

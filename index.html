@@ -365,6 +365,39 @@
                 <input type="file" id="pubTweeFile" accept=".twee,.txt" class="form-input">
                 <div class="form-hint" style="margin-top: 4px;">Optionnel : permet aux lecteurs et écrivains curieux de télécharger l'arborescence brute des nœuds textuels.</div>
               </div>
+
+              <!-- Versions exécutables autonomes (macOS, Windows, Android) -->
+              <div class="interactive-apps-box" style="margin-top: 16px; padding: 14px 16px; background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-md);">
+                <label style="font-weight: 700; color: var(--text); font-size: 0.92rem; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span>💾</span> Applications exécutables téléchargeables (Optionnel)
+                </label>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+                  Permet aux lecteurs d'installer ou de jouer à cette fiction sous forme de véritable application autonome (macOS, Windows, Android). Indiquez un lien direct ou sélectionnez un fichier.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <div>
+                    <label class="form-sublabel" for="pubAppMacUrl" style="display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px;">
+                      <span>🍏</span> Version macOS (.dmg, .zip ou URL directe)
+                    </label>
+                    <input type="url" id="pubAppMacUrl" class="form-input" placeholder="Lien direct (ex: https://.../fiction_macos.dmg)" style="margin-bottom: 6px;">
+                    <input type="file" id="pubAppMacFile" accept=".dmg,.zip,.app.zip" class="form-input" style="font-size: 0.82rem;">
+                  </div>
+                  <div>
+                    <label class="form-sublabel" for="pubAppWindowsUrl" style="display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px;">
+                      <span>🪟</span> Version Windows (.exe, .zip ou URL directe)
+                    </label>
+                    <input type="url" id="pubAppWindowsUrl" class="form-input" placeholder="Lien direct (ex: https://.../fiction_windows.exe)" style="margin-bottom: 6px;">
+                    <input type="file" id="pubAppWindowsFile" accept=".exe,.zip" class="form-input" style="font-size: 0.82rem;">
+                  </div>
+                  <div>
+                    <label class="form-sublabel" for="pubAppAndroidUrl" style="display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px;">
+                      <span>🤖</span> Version Android (.apk ou URL directe)
+                    </label>
+                    <input type="url" id="pubAppAndroidUrl" class="form-input" placeholder="Lien direct (ex: https://.../fiction_android.apk)" style="margin-bottom: 6px;">
+                    <input type="file" id="pubAppAndroidFile" accept=".apk" class="form-input" style="font-size: 0.82rem;">
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Indicateurs de lecture / jeu calculés ou saisis manuellement -->
@@ -1091,6 +1124,15 @@
               <button type="button" class="interactive-dl-item" id="interactiveDlZipBtn" style="display: none;">
                 <span>📦 Archive complète (.zip)</span>
               </button>
+              <button type="button" class="interactive-dl-item" id="interactiveDlMacBtn" style="display: none;">
+                <span>🍏 Application macOS (.dmg)</span>
+              </button>
+              <button type="button" class="interactive-dl-item" id="interactiveDlWindowsBtn" style="display: none;">
+                <span>🪟 Application Windows (.exe)</span>
+              </button>
+              <button type="button" class="interactive-dl-item" id="interactiveDlAndroidBtn" style="display: none;">
+                <span>🤖 Application Android (.apk)</span>
+              </button>
             </div>
           </div>
 
@@ -1226,6 +1268,42 @@
               <label class="form-sublabel" for="editTweeFile" style="font-weight: 600; margin-bottom: 6px; display: block;">Remplacer le fichier source Twine (.twee ou .txt)</label>
               <input type="file" id="editTweeFile" accept=".twee,.txt" class="form-input">
               <div class="form-hint" style="margin-top: 4px;" id="editCurrentTweeInfo">Laissez vide pour conserver le code source existant.</div>
+            </div>
+
+            <!-- Versions exécutables autonomes (macOS, Windows, Android) -->
+            <div class="interactive-apps-box" style="margin-top: 16px; padding: 14px 16px; background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-md);">
+              <label style="font-weight: 700; color: var(--text); font-size: 0.92rem; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span>💾</span> Applications exécutables téléchargeables (Optionnel)
+              </label>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+                Mettre à jour ou ajouter les liens / fichiers des versions exécutables pour cette fiction.
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label class="form-sublabel" for="editAppMacUrl" style="display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px;">
+                    <span>🍏</span> Version macOS (.dmg, .zip ou URL directe)
+                  </label>
+                  <input type="url" id="editAppMacUrl" class="form-input" placeholder="Lien direct (ex: https://.../fiction_macos.dmg)" style="margin-bottom: 6px;">
+                  <input type="file" id="editAppMacFile" accept=".dmg,.zip,.app.zip" class="form-input" style="font-size: 0.82rem;">
+                  <div class="form-hint" id="editCurrentAppMacInfo" style="margin-top: 2px;"></div>
+                </div>
+                <div>
+                  <label class="form-sublabel" for="editAppWindowsUrl" style="display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px;">
+                    <span>🪟</span> Version Windows (.exe, .zip ou URL directe)
+                  </label>
+                  <input type="url" id="editAppWindowsUrl" class="form-input" placeholder="Lien direct (ex: https://.../fiction_windows.exe)" style="margin-bottom: 6px;">
+                  <input type="file" id="editAppWindowsFile" accept=".exe,.zip" class="form-input" style="font-size: 0.82rem;">
+                  <div class="form-hint" id="editCurrentAppWindowsInfo" style="margin-top: 2px;"></div>
+                </div>
+                <div>
+                  <label class="form-sublabel" for="editAppAndroidUrl" style="display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px;">
+                    <span>🤖</span> Version Android (.apk ou URL directe)
+                  </label>
+                  <input type="url" id="editAppAndroidUrl" class="form-input" placeholder="Lien direct (ex: https://.../fiction_android.apk)" style="margin-bottom: 6px;">
+                  <input type="file" id="editAppAndroidFile" accept=".apk" class="form-input" style="font-size: 0.82rem;">
+                  <div class="form-hint" id="editCurrentAppAndroidInfo" style="margin-top: 2px;"></div>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -392,6 +392,15 @@ async function uploadPdfToSupabase(file, writingId) {
     } else if (lower.endsWith('.twee') || lower.endsWith('.txt')) {
       ext = 'twee';
       contentType = 'text/plain; charset=utf-8';
+    } else if (lower.endsWith('.dmg')) {
+      ext = 'dmg';
+      contentType = 'application/x-apple-diskimage';
+    } else if (lower.endsWith('.exe')) {
+      ext = 'exe';
+      contentType = 'application/x-msdownload';
+    } else if (lower.endsWith('.apk')) {
+      ext = 'apk';
+      contentType = 'application/vnd.android.package-archive';
     }
   }
 
@@ -2949,6 +2958,17 @@ async function refreshShowcase() {
           downloadInteractiveFile(w, 'zip');
         });
       }
+
+      const appsToggleBtn = document.getElementById(`btn-apps-toggle-${w.id}`);
+      const appsDrawer = document.getElementById(`apps-drawer-${w.id}`);
+      if (appsToggleBtn && appsDrawer) {
+        appsToggleBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const isActive = appsDrawer.classList.toggle('active');
+          appsToggleBtn.classList.toggle('active', isActive);
+        });
+      }
       if (commentBtn) {
         commentBtn.addEventListener('click', () => openCommentModal(w.id, w.title));
       }
@@ -3285,6 +3305,56 @@ window.togglePoetryExpand = function(id) {
   }
 };
 
+const INTERACTIVE_RELEASES_STORAGE_KEY = 'caddrillage_interactive_releases';
+
+function getInteractiveReleasesSettings() {
+  try {
+    const raw = localStorage.getItem(INTERACTIVE_RELEASES_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {};
+}
+
+function saveInteractiveReleasesSettings(releases) {
+  try {
+    localStorage.setItem(INTERACTIVE_RELEASES_STORAGE_KEY, JSON.stringify(releases || {}));
+  } catch (e) {}
+}
+
+function setWritingAppReleases(writingId, releasesData) {
+  if (!writingId) return;
+  const current = getInteractiveReleasesSettings();
+  if (releasesData && Object.keys(releasesData).length > 0) {
+    current[String(writingId)] = releasesData;
+  } else {
+    delete current[String(writingId)];
+  }
+  saveInteractiveReleasesSettings(current);
+}
+
+function getWritingAppReleases(writing) {
+  if (!writing) return {};
+  const localReleases = getInteractiveReleasesSettings();
+  const settings = (typeof getCachedSiteSettings === 'function') ? getCachedSiteSettings() : null;
+  const fromSettings = (settings && settings.interactiveReleases && settings.interactiveReleases[writing.id])
+    ? settings.interactiveReleases[writing.id]
+    : null;
+  const fromLocal = localReleases[String(writing.id)] || null;
+  const fromWriting = writing.appReleases || null;
+  const merged = { ...(fromSettings || {}), ...(fromLocal || {}), ...(fromWriting || {}) };
+
+  // Fallback direct pour Projet Pelfort (Démo) / Mille et une raisons
+  if (String(writing.id) === '1793364349676' || (writing.title && writing.title.toLowerCase().includes('pelfort'))) {
+    if (!merged.macUrl) merged.macUrl = 'https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_macOS_Apple_Silicon.dmg';
+    if (!merged.macIntelUrl) merged.macIntelUrl = 'https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_macOS_Intel.dmg';
+    if (!merged.windowsUrl) merged.windowsUrl = 'https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_Windows_Setup.exe';
+    if (!merged.windowsPortableUrl) merged.windowsPortableUrl = 'https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_Windows_Portable.exe';
+    if (!merged.androidUrl) merged.androidUrl = 'https://github.com/Caddrillage4/l-antre-du-caddrillage/releases/download/pelfort-v1.0/Mille_et_une_raisons_Android.apk';
+  }
+
+  return merged;
+}
+
 function renderWritingCard(writing) {
   const isPoetry = writing.category === 'poesie';
   const isInteractive = writing.category === 'fiction-interactive';
@@ -3372,6 +3442,9 @@ function renderWritingCard(writing) {
          </div>`
       : '';
 
+    const apps = getWritingAppReleases(writing);
+    const hasApps = !!(apps.macUrl || apps.windowsUrl || apps.androidUrl);
+
     return `
       <article class="writing-card interactive-fiction-card ${isFav ? 'is-favorite-card' : ''}" id="card-${writing.id}">
         <div class="card-top">
@@ -3411,6 +3484,14 @@ function renderWritingCard(writing) {
             Lancer la fiction
           </button>
 
+          ${hasApps ? `
+          <button type="button" class="btn-secondary btn-apps-toggle" id="btn-apps-toggle-${writing.id}" title="Télécharger sous forme d'application (macOS, Windows, Android)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            Applications
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          ` : ''}
+
           <button type="button" class="btn-download" id="btn-dl-html-${writing.id}" title="Télécharger le jeu autonome (.html)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -3441,6 +3522,41 @@ function renderWritingCard(writing) {
             Laisser un mot
           </button>
         </div>
+
+        ${hasApps ? `
+        <div class="card-apps-drawer" id="apps-drawer-${writing.id}">
+          <div class="card-apps-header">
+            <span class="card-apps-title">Versions exécutables hors-ligne :</span>
+          </div>
+          <div class="card-apps-buttons-row">
+            ${apps.macUrl ? `
+              <a href="${escapeHtml(apps.macUrl)}" target="_blank" download class="btn-app-platform" title="Télécharger pour macOS (Apple Silicon M1-M4)">
+                <span>🍏</span> macOS (.dmg)
+              </a>
+            ` : ''}
+            ${apps.macIntelUrl ? `
+              <a href="${escapeHtml(apps.macIntelUrl)}" target="_blank" download class="btn-app-platform" title="Télécharger pour macOS (Intel)">
+                <span>🍏</span> macOS (Intel)
+              </a>
+            ` : ''}
+            ${apps.windowsUrl ? `
+              <a href="${escapeHtml(apps.windowsUrl)}" target="_blank" download class="btn-app-platform" title="Télécharger pour Windows (Installateur)">
+                <span>🪟</span> Windows (.exe)
+              </a>
+            ` : ''}
+            ${apps.windowsPortableUrl ? `
+              <a href="${escapeHtml(apps.windowsPortableUrl)}" target="_blank" download class="btn-app-platform" title="Télécharger pour Windows (Version Portable)">
+                <span>🪟</span> Windows (Portable)
+              </a>
+            ` : ''}
+            ${apps.androidUrl ? `
+              <a href="${escapeHtml(apps.androidUrl)}" target="_blank" download class="btn-app-platform" title="Télécharger pour Android (APK)">
+                <span>🤖</span> Android (.apk)
+              </a>
+            ` : ''}
+          </div>
+        </div>
+        ` : ''}
       </article>
     `;
   }
@@ -4709,6 +4825,39 @@ async function openInteractiveFictionModal(writing) {
       dlZipBtn.style.display = (isZip || writing.zipFileName || writing.zipBlob || (writing.pdfUrl && writing.pdfUrl.toLowerCase().endsWith('.zip'))) ? 'flex' : 'none';
     }
 
+    const dlMacBtn = document.getElementById('interactiveDlMacBtn');
+    const dlWindowsBtn = document.getElementById('interactiveDlWindowsBtn');
+    const dlAndroidBtn = document.getElementById('interactiveDlAndroidBtn');
+
+    const apps = getWritingAppReleases(writing);
+    if (dlMacBtn) {
+      dlMacBtn.style.display = apps.macUrl ? 'flex' : 'none';
+      if (apps.macUrl) {
+        dlMacBtn.onclick = () => {
+          window.open(apps.macUrl, '_blank');
+          if (dropdownMenu) dropdownMenu.classList.remove('active');
+        };
+      }
+    }
+    if (dlWindowsBtn) {
+      dlWindowsBtn.style.display = apps.windowsUrl ? 'flex' : 'none';
+      if (apps.windowsUrl) {
+        dlWindowsBtn.onclick = () => {
+          window.open(apps.windowsUrl, '_blank');
+          if (dropdownMenu) dropdownMenu.classList.remove('active');
+        };
+      }
+    }
+    if (dlAndroidBtn) {
+      dlAndroidBtn.style.display = apps.androidUrl ? 'flex' : 'none';
+      if (apps.androidUrl) {
+        dlAndroidBtn.onclick = () => {
+          window.open(apps.androidUrl, '_blank');
+          if (dropdownMenu) dropdownMenu.classList.remove('active');
+        };
+      }
+    }
+
     if (iframe) {
       iframe.onload = () => {
         hideLoader();
@@ -5312,6 +5461,70 @@ function initPublishForm() {
       }
     }
 
+    // Traitement des applications exécutables optionnelles (macOS, Windows, Android)
+    let appReleases = null;
+    if (isInteractive) {
+      const pubAppMacUrl = document.getElementById('pubAppMacUrl');
+      const pubAppWindowsUrl = document.getElementById('pubAppWindowsUrl');
+      const pubAppAndroidUrl = document.getElementById('pubAppAndroidUrl');
+      const pubAppMacFile = document.getElementById('pubAppMacFile');
+      const pubAppWindowsFile = document.getElementById('pubAppWindowsFile');
+      const pubAppAndroidFile = document.getElementById('pubAppAndroidFile');
+
+      let macUrl = pubAppMacUrl ? pubAppMacUrl.value.trim() : '';
+      let windowsUrl = pubAppWindowsUrl ? pubAppWindowsUrl.value.trim() : '';
+      let androidUrl = pubAppAndroidUrl ? pubAppAndroidUrl.value.trim() : '';
+
+      if (!macUrl && pubAppMacFile && pubAppMacFile.files && pubAppMacFile.files[0]) {
+        const file = pubAppMacFile.files[0];
+        if (file.size <= 50 * 1024 * 1024) {
+          try {
+            const up = await uploadPdfToSupabase(file, `${writingId}_app_mac`);
+            macUrl = up.publicUrl;
+          } catch (e) {
+            console.warn('Erreur upload app mac:', e);
+          }
+        } else {
+          showToast(`L'application macOS (${formatFileSize(file.size)}) dépasse 50 Mo. Veuillez utiliser un lien direct (ex: GitHub Releases).`, 'warning');
+        }
+      }
+
+      if (!windowsUrl && pubAppWindowsFile && pubAppWindowsFile.files && pubAppWindowsFile.files[0]) {
+        const file = pubAppWindowsFile.files[0];
+        if (file.size <= 50 * 1024 * 1024) {
+          try {
+            const up = await uploadPdfToSupabase(file, `${writingId}_app_windows`);
+            windowsUrl = up.publicUrl;
+          } catch (e) {
+            console.warn('Erreur upload app windows:', e);
+          }
+        } else {
+          showToast(`L'application Windows (${formatFileSize(file.size)}) dépasse 50 Mo. Veuillez utiliser un lien direct (ex: GitHub Releases).`, 'warning');
+        }
+      }
+
+      if (!androidUrl && pubAppAndroidFile && pubAppAndroidFile.files && pubAppAndroidFile.files[0]) {
+        const file = pubAppAndroidFile.files[0];
+        if (file.size <= 50 * 1024 * 1024) {
+          try {
+            const up = await uploadPdfToSupabase(file, `${writingId}_app_android`);
+            androidUrl = up.publicUrl;
+          } catch (e) {
+            console.warn('Erreur upload app android:', e);
+          }
+        } else {
+          showToast(`L'application Android (${formatFileSize(file.size)}) dépasse 50 Mo. Veuillez utiliser un lien direct (ex: GitHub Releases).`, 'warning');
+        }
+      }
+
+      if (macUrl || windowsUrl || androidUrl) {
+        appReleases = {};
+        if (macUrl) appReleases.macUrl = macUrl;
+        if (windowsUrl) appReleases.windowsUrl = windowsUrl;
+        if (androidUrl) appReleases.androidUrl = androidUrl;
+      }
+    }
+
     const tags = parseTagsString(rawTags);
     const writingId = String(Date.now());
 
@@ -5338,6 +5551,7 @@ function initPublishForm() {
       tweeFileName: (isInteractive && tweeData) ? tweeData.tweeFileName : '',
       tweeFileSize: (isInteractive && tweeData) ? tweeData.tweeFileSize : '',
       tweeBlob: (isInteractive && tweeData) ? tweeData.tweeBlob : null,
+      appReleases: (isInteractive && appReleases) ? appReleases : null,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -5345,6 +5559,12 @@ function initPublishForm() {
     try {
       const primaryFile = isInteractive ? selectedInteractiveData.primaryFile : file;
       await dbSaveWriting(writing, primaryFile);
+
+      // Si des applications exécutables ont été configurées
+      if (isInteractive && appReleases) {
+        setWritingAppReleases(writingId, appReleases);
+        await syncSiteSettingsToCloud(false);
+      }
 
       // Si coché en favori dès la publication
       const pubIsFavorite = document.getElementById('pubIsFavorite');
@@ -5360,6 +5580,12 @@ function initPublishForm() {
       if (pubIsFavorite) pubIsFavorite.checked = false;
       if (pubFavText) pubFavText.value = '';
       if (pubFavGroup) pubFavGroup.style.display = 'none';
+      if (document.getElementById('pubAppMacUrl')) document.getElementById('pubAppMacUrl').value = '';
+      if (document.getElementById('pubAppWindowsUrl')) document.getElementById('pubAppWindowsUrl').value = '';
+      if (document.getElementById('pubAppAndroidUrl')) document.getElementById('pubAppAndroidUrl').value = '';
+      if (document.getElementById('pubAppMacFile')) document.getElementById('pubAppMacFile').value = '';
+      if (document.getElementById('pubAppWindowsFile')) document.getElementById('pubAppWindowsFile').value = '';
+      if (document.getElementById('pubAppAndroidFile')) document.getElementById('pubAppAndroidFile').value = '';
       selectedInteractiveData = null;
       if (statusBox) statusBox.classList.remove('active');
       if (interactiveStatusBox) interactiveStatusBox.classList.remove('active');
@@ -5841,6 +6067,41 @@ window.openEditModal = async function(id) {
     if (editInteractiveStatusBox) editInteractiveStatusBox.classList.remove('active');
     if (editTweeFile) editTweeFile.value = '';
 
+    // Préremplissage des applications exécutables (macOS, Windows, Android)
+    const currentApps = getWritingAppReleases(writing);
+    const editAppMacUrl = document.getElementById('editAppMacUrl');
+    const editAppWindowsUrl = document.getElementById('editAppWindowsUrl');
+    const editAppAndroidUrl = document.getElementById('editAppAndroidUrl');
+    const editAppMacFile = document.getElementById('editAppMacFile');
+    const editAppWindowsFile = document.getElementById('editAppWindowsFile');
+    const editAppAndroidFile = document.getElementById('editAppAndroidFile');
+    const editCurrentAppMacInfo = document.getElementById('editCurrentAppMacInfo');
+    const editCurrentAppWindowsInfo = document.getElementById('editCurrentAppWindowsInfo');
+    const editCurrentAppAndroidInfo = document.getElementById('editCurrentAppAndroidInfo');
+
+    if (editAppMacUrl) editAppMacUrl.value = currentApps.macUrl || '';
+    if (editAppWindowsUrl) editAppWindowsUrl.value = currentApps.windowsUrl || '';
+    if (editAppAndroidUrl) editAppAndroidUrl.value = currentApps.androidUrl || '';
+    if (editAppMacFile) editAppMacFile.value = '';
+    if (editAppWindowsFile) editAppWindowsFile.value = '';
+    if (editAppAndroidFile) editAppAndroidFile.value = '';
+
+    if (editCurrentAppMacInfo) {
+      editCurrentAppMacInfo.textContent = currentApps.macUrl
+        ? `Lien configuré : ${currentApps.macUrl.length > 55 ? currentApps.macUrl.substring(0, 52) + '...' : currentApps.macUrl}`
+        : 'Laissez vide ou modifiez le lien / fichier pour macOS.';
+    }
+    if (editCurrentAppWindowsInfo) {
+      editCurrentAppWindowsInfo.textContent = currentApps.windowsUrl
+        ? `Lien configuré : ${currentApps.windowsUrl.length > 55 ? currentApps.windowsUrl.substring(0, 52) + '...' : currentApps.windowsUrl}`
+        : 'Laissez vide ou modifiez le lien / fichier pour Windows.';
+    }
+    if (editCurrentAppAndroidInfo) {
+      editCurrentAppAndroidInfo.textContent = currentApps.androidUrl
+        ? `Lien configuré : ${currentApps.androidUrl.length > 55 ? currentApps.androidUrl.substring(0, 52) + '...' : currentApps.androidUrl}`
+        : 'Laissez vide ou modifiez le lien / fichier pour Android.';
+    }
+
     const modal = document.getElementById('editModal');
     if (modal) modal.classList.add('active');
   } catch (err) {
@@ -6216,6 +6477,72 @@ function initEditForm() {
 
     try {
       await dbSaveWriting(currentEditingWriting, newFile);
+
+      // Mise à jour des applications exécutables pour la fiction interactive
+      if (isInteractive) {
+        const editAppMacUrl = document.getElementById('editAppMacUrl');
+        const editAppWindowsUrl = document.getElementById('editAppWindowsUrl');
+        const editAppAndroidUrl = document.getElementById('editAppAndroidUrl');
+        const editAppMacFile = document.getElementById('editAppMacFile');
+        const editAppWindowsFile = document.getElementById('editAppWindowsFile');
+        const editAppAndroidFile = document.getElementById('editAppAndroidFile');
+
+        const existingApps = getWritingAppReleases(currentEditingWriting) || {};
+        let macUrl = editAppMacUrl ? editAppMacUrl.value.trim() : (existingApps.macUrl || '');
+        let windowsUrl = editAppWindowsUrl ? editAppWindowsUrl.value.trim() : (existingApps.windowsUrl || '');
+        let androidUrl = editAppAndroidUrl ? editAppAndroidUrl.value.trim() : (existingApps.androidUrl || '');
+
+        if (editAppMacFile && editAppMacFile.files && editAppMacFile.files[0]) {
+          const file = editAppMacFile.files[0];
+          if (file.size <= 50 * 1024 * 1024) {
+            try {
+              const up = await uploadPdfToSupabase(file, `${currentEditingWriting.id}_app_mac`);
+              macUrl = up.publicUrl;
+            } catch (e) {
+              console.warn('Erreur upload edit app mac:', e);
+            }
+          } else {
+            showToast(`L'application macOS (${formatFileSize(file.size)}) dépasse 50 Mo. Veuillez utiliser un lien direct.`, 'warning');
+          }
+        }
+
+        if (editAppWindowsFile && editAppWindowsFile.files && editAppWindowsFile.files[0]) {
+          const file = editAppWindowsFile.files[0];
+          if (file.size <= 50 * 1024 * 1024) {
+            try {
+              const up = await uploadPdfToSupabase(file, `${currentEditingWriting.id}_app_windows`);
+              windowsUrl = up.publicUrl;
+            } catch (e) {
+              console.warn('Erreur upload edit app windows:', e);
+            }
+          } else {
+            showToast(`L'application Windows (${formatFileSize(file.size)}) dépasse 50 Mo. Veuillez utiliser un lien direct.`, 'warning');
+          }
+        }
+
+        if (editAppAndroidFile && editAppAndroidFile.files && editAppAndroidFile.files[0]) {
+          const file = editAppAndroidFile.files[0];
+          if (file.size <= 50 * 1024 * 1024) {
+            try {
+              const up = await uploadPdfToSupabase(file, `${currentEditingWriting.id}_app_android`);
+              androidUrl = up.publicUrl;
+            } catch (e) {
+              console.warn('Erreur upload edit app android:', e);
+            }
+          } else {
+            showToast(`L'application Android (${formatFileSize(file.size)}) dépasse 50 Mo. Veuillez utiliser un lien direct.`, 'warning');
+          }
+        }
+
+        const updatedApps = { ...existingApps };
+        if (macUrl) updatedApps.macUrl = macUrl; else delete updatedApps.macUrl;
+        if (windowsUrl) updatedApps.windowsUrl = windowsUrl; else delete updatedApps.windowsUrl;
+        if (androidUrl) updatedApps.androidUrl = androidUrl; else delete updatedApps.androidUrl;
+
+        currentEditingWriting.appReleases = updatedApps;
+        setWritingAppReleases(currentEditingWriting.id, updatedApps);
+        await syncSiteSettingsToCloud(false);
+      }
 
       // Prise en compte de la case Favori et de son message personnalisé
       const editIsFavorite = document.getElementById('editIsFavorite');
@@ -6854,6 +7181,7 @@ function getAllCurrentSiteSettings() {
     favoriteBadgeText: favoriteBadgeText,
     favoriteWritingIds: favoriteWritingIds,
     favoriteCustomBadges: favoriteCustomBadges,
+    interactiveReleases: getInteractiveReleasesSettings(),
     updatedAt: updatedAt
   };
 }
@@ -6893,6 +7221,9 @@ function applyAllSiteSettings(settings, saveToLocal = true) {
       } else {
         saveFavoriteCustomBadges({});
       }
+    }
+    if (settings.interactiveReleases !== undefined && typeof settings.interactiveReleases === 'object') {
+      saveInteractiveReleasesSettings(settings.interactiveReleases);
     }
     if (settings.customThemes !== undefined) {
       if (settings.customThemes && typeof settings.customThemes === 'object') {
